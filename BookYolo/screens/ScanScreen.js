@@ -76,6 +76,7 @@ export default function ScanScreen({ navigation, route }) {
   const hasRefreshedThisFocus = useRef(false);
   const notificationsSentThisSession = useRef(false);
   const pollingIntervalRef = useRef(null);
+  const lastTabPressTime = useRef(0);
 
   // Load user data
   const loadUserData = useCallback(async () => {
@@ -99,6 +100,25 @@ export default function ScanScreen({ navigation, route }) {
       }
     };
   }, []);
+
+  // Handle reset parameter (when Scan tab is pressed while already focused)
+  // Using timestamp to ensure the effect triggers every time
+  useEffect(() => {
+    const resetParam = route?.params?.reset;
+    const timestamp = route?.params?.timestamp;
+    
+    if (resetParam === true && timestamp) {
+      // Only trigger if this is a new timestamp (not a stale navigation)
+      if (timestamp !== lastTabPressTime.current) {
+        lastTabPressTime.current = timestamp;
+        startNewChat();
+        // Clear the reset parameter after a short delay to allow the effect to complete
+        setTimeout(() => {
+          navigation.setParams({ reset: undefined, timestamp: undefined });
+        }, 100);
+      }
+    }
+  }, [route?.params?.reset, route?.params?.timestamp, startNewChat, navigation]);
 
   // Handle scan history data when navigating from history screen (same as web app)
   useEffect(() => {
@@ -457,7 +477,7 @@ export default function ScanScreen({ navigation, route }) {
     }
   };
 
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
     setMessages([]);
     setCurrentChatId(null);
     setCurrentScan(null);
@@ -469,7 +489,7 @@ export default function ScanScreen({ navigation, route }) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
-  };
+  }, []);
 
   // Poll for scan completion (same as web app)
   const pollForScanCompletion = (scanId, chatId) => {
@@ -715,15 +735,6 @@ export default function ScanScreen({ navigation, route }) {
             <Ionicons name="person" size={24} color="#ffffff" />
           </View>
           <Text style={styles.profileLabel}>Profile</Text>
-        </TouchableOpacity>
-        
-        {/* New Scan Button (same as web app) */}
-        <TouchableOpacity
-          style={styles.newScanButton}
-          onPress={startNewChat}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.newScanButtonText}>New Scan</Text>
         </TouchableOpacity>
         
         <Text style={styles.versionText}>Version 17.7.9.9b</Text>

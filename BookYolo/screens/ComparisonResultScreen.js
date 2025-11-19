@@ -63,7 +63,6 @@ const ComparisonResultScreen = () => {
   const [loading, setLoading] = useState(false);
   
   // AI Assistant state
-  const [showChat, setShowChat] = useState(false);
   const [question, setQuestion] = useState("");
   const [isAsking, setIsAsking] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -187,12 +186,12 @@ const ComparisonResultScreen = () => {
       return;
     }
     
-    // Add user message immediately
+    // Add user message immediately (matching web app format)
     const userQuestion = question.trim();
     const updatedMessages = [...messages, { 
-      type: "user", 
-      text: userQuestion,
-      id: Date.now().toString()
+      role: "user", 
+      content: userQuestion,
+      messageType: "question"
     }];
     setMessages(updatedMessages);
     setQuestion("");
@@ -211,17 +210,16 @@ const ComparisonResultScreen = () => {
         if (error) {
           // Handle API errors
           const newMessages = [...updatedMessages, { 
-            type: "bot", 
-            text: `Sorry, I encountered an error: ${error}. Please try again.`,
-            id: (Date.now() + 1).toString()
+            role: "assistant", 
+            content: `Sorry, I encountered an error: ${error}. Please try again.`,
+            isError: true
           }];
           setMessages(newMessages);
         } else if (data && data.answer) {
           // Use backend AI response
           const newMessages = [...updatedMessages, { 
-            type: "bot", 
-            text: data.answer,
-            id: (Date.now() + 1).toString()
+            role: "assistant", 
+            content: data.answer
           }];
           setMessages(newMessages);
           
@@ -238,9 +236,9 @@ const ComparisonResultScreen = () => {
         } else {
           // Fallback response if no answer in data
           const newMessages = [...updatedMessages, { 
-            type: "bot", 
-            text: "I'm sorry, I couldn't process your question. Please try rephrasing it.",
-            id: (Date.now() + 1).toString()
+            role: "assistant", 
+            content: "I'm sorry, I couldn't process your question. Please try rephrasing it.",
+            isError: true
           }];
           setMessages(newMessages);
         }
@@ -280,17 +278,16 @@ const ComparisonResultScreen = () => {
             }
             
             const newMessages = [...updatedMessages, { 
-              type: "bot", 
-              text: errorMessage,
-              id: (Date.now() + 1).toString()
+              role: "assistant", 
+              content: errorMessage,
+              isError: true
             }];
             setMessages(newMessages);
           } else if (data && data.answer) {
             // Use backend AI response from /compare endpoint
             const newMessages = [...updatedMessages, { 
-              type: "bot", 
-              text: data.answer,
-              id: (Date.now() + 1).toString()
+              role: "assistant", 
+              content: data.answer
             }];
             setMessages(newMessages);
             
@@ -307,9 +304,9 @@ const ComparisonResultScreen = () => {
         } else {
           // Fallback response if no answer in data
           const newMessages = [...updatedMessages, { 
-            type: "bot", 
-            text: "I'm sorry, I couldn't process your question. Please try rephrasing it.",
-            id: (Date.now() + 1).toString()
+            role: "assistant", 
+            content: "I'm sorry, I couldn't process your question. Please try rephrasing it.",
+            isError: true
           }];
           setMessages(newMessages);
           }
@@ -318,9 +315,9 @@ const ComparisonResultScreen = () => {
           
           // Show user-friendly error message
           const errorMessages = [...updatedMessages, { 
-            type: "bot", 
-            text: "I'm having trouble connecting to the AI service right now. Let me try a different approach...",
-            id: (Date.now() + 1).toString()
+            role: "assistant", 
+            content: "I'm having trouble connecting to the AI service right now. Let me try a different approach...",
+            isError: true
           }];
           setMessages(errorMessages);
           
@@ -335,9 +332,8 @@ const ComparisonResultScreen = () => {
             
             const aiResponse = generateAIResponse(userQuestion, comparisonDataForLocal);
             const fallbackMessages = [...errorMessages, { 
-              type: "bot", 
-              text: aiResponse,
-              id: (Date.now() + 2).toString()
+              role: "assistant", 
+              content: aiResponse
             }];
             setMessages(fallbackMessages);
             
@@ -364,9 +360,8 @@ const ComparisonResultScreen = () => {
         
         const aiResponse = generateAIResponse(userQuestion, comparisonData);
         const newMessages = [...updatedMessages, { 
-          type: "bot", 
-          text: aiResponse,
-          id: (Date.now() + 1).toString()
+          role: "assistant", 
+          content: aiResponse
         }];
         setMessages(newMessages);
         
@@ -397,9 +392,8 @@ const ComparisonResultScreen = () => {
       };
       const fallbackResponse = generateAIResponse(userQuestion, comparisonData);
       setMessages((prev) => [...prev, { 
-        type: "bot", 
-        text: fallbackResponse,
-        id: (Date.now() + 1).toString()
+        role: "assistant", 
+        content: fallbackResponse
       }]);
       
       // Deduct 0.5 scans from local balance after fallback AI response
@@ -422,9 +416,16 @@ const ComparisonResultScreen = () => {
 
     setLoading(true);
     try {
+      let comparisonAnswer = null;
+      let firstListing = null;
+      let secondListing = null;
+      
       if (comparisonData.source === 'local' && comparisonData.answer) {
         // Show local comparison result
-        setComparisonResult({ answer: comparisonData.answer });
+        comparisonAnswer = comparisonData.answer;
+        firstListing = comparisonData.scan1 || comparisonData.firstListing;
+        secondListing = comparisonData.scan2 || comparisonData.secondListing;
+        setComparisonResult({ answer: comparisonAnswer });
         
       } else if (comparisonData.source === 'backend' && comparisonData.chatId) {
         // Set chatId for AI assistant
@@ -438,7 +439,11 @@ const ComparisonResultScreen = () => {
           // Find the assistant message with the comparison result
           const comparisonMessage = chatData.messages.find(msg => msg.role === 'assistant');
           if (comparisonMessage) {
-            setComparisonResult({ answer: comparisonMessage.content });
+            comparisonAnswer = comparisonMessage.content;
+            // Try to get listing data from chatData
+            firstListing = chatData.scan1 || comparisonData.scan1 || comparisonData.firstListing;
+            secondListing = chatData.scan2 || comparisonData.scan2 || comparisonData.secondListing;
+            setComparisonResult({ answer: comparisonAnswer });
           } else {
             Alert.alert('Error', 'No comparison result found in chat history');
           }
@@ -448,6 +453,34 @@ const ComparisonResultScreen = () => {
       } else {
         Alert.alert('Error', 'Invalid comparison data');
       }
+      
+      // Add messages to display comparison result (matching web app and CompareScreen)
+      if (comparisonAnswer && firstListing && secondListing) {
+        const userMessage = {
+          role: "user",
+          content: comparisonData.question 
+            ? `Compare: ${firstListing.listing_title || firstListing.location} vs ${secondListing.listing_title || secondListing.location}. ${comparisonData.question}`
+            : `Compare: ${firstListing.listing_title || firstListing.location} vs ${secondListing.listing_title || secondListing.location}`,
+          messageType: "compare"
+        };
+        
+        const assistantMessage = {
+          role: "assistant",
+          content: comparisonAnswer,
+          isComparison: true,
+          comparedScans: {
+            scan1: firstListing,
+            scan2: secondListing
+          }
+        };
+        
+        const postCompareMessage = {
+          role: "assistant",
+          content: "Do you have any questions about this comparison? Feel free to ask anything..."
+        };
+        
+        setMessages([userMessage, assistantMessage, postCompareMessage]);
+      }
     } catch (error) {
       Alert.alert('Error', 'Could not load comparison details');
     } finally {
@@ -455,27 +488,101 @@ const ComparisonResultScreen = () => {
     }
   };
 
-  const formatComparisonResult = (text) => {
-    if (!text) return <Text style={styles.resultText}>No comparison result available</Text>;
+  // Render answer text with clickable URLs (matching web app)
+  const renderAnswerText = (text) => {
+    if (!text || typeof text !== 'string') {
+      return <Text style={styles.messageText}>No answer available</Text>;
+    }
 
-    const sentences = text.split(/(?<=[.!?])\s+/).filter(sentence => sentence.trim().length > 0);
+    // Check if text contains URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    const hasUrl = parts.length > 1;
+
+    if (hasUrl) {
+      // Render text with clickable URLs (matching web app whitespace-pre-wrap behavior)
+      return (
+        <Text style={styles.messageText}>
+          {parts.map((part, index) => {
+            // Check if this part is a URL
+            if (part.match(/^https?:\/\/[^\s]+$/)) {
+              return (
+                <Text
+                  key={index}
+                  style={styles.linkText}
+                  onPress={() => Linking.openURL(part)}
+                >
+                  {part}
+                </Text>
+              );
+            }
+            return <Text key={index}>{part}</Text>;
+          })}
+        </Text>
+      );
+    }
+
+    // No URLs - just display text as-is (matching web app whitespace-pre-wrap)
+    return <Text style={styles.messageText}>{text}</Text>;
+  };
+
+  // Render message (matching web app format)
+  const renderMessage = (message, index) => {
+    const isUser = message.role === "user";
+    const isError = message.isError;
+    const isComparison = message.isComparison && message.comparedScans;
     
     return (
-      <View style={styles.resultFormatted}>
-        {sentences.map((sentence, index) => {
-          const trimmedSentence = sentence.trim();
-          if (!trimmedSentence) return null;
-          
-          // All sentences become bullet points for clean, consistent formatting
-          return (
-            <View key={index} style={styles.bulletPoint}>
-              <Text style={styles.bulletText}>•</Text>
-              <Text style={styles.bulletContent}>
-                {trimmedSentence}
-              </Text>
+      <View key={index} style={[styles.messageContainer, isUser ? styles.userMessageContainer : styles.assistantMessageContainer]}>
+        <View style={[
+          styles.messageBubble,
+          isUser ? styles.userMessageBubble : styles.assistantMessageBubble,
+          isError && styles.errorMessageBubble
+        ]}>
+          {!isUser && !isError && isComparison ? (
+            // Comparison result display (matching web app)
+            <View style={styles.comparisonResultContainer}>
+              {/* Listing A Information */}
+              <View style={styles.listingInfoSection}>
+                <Text style={styles.listingLabel}>
+                  Listing A: {message.comparedScans.scan1.listing_title || 'Title not available'}
+                </Text>
+                {message.comparedScans.scan1.listing_url && (
+                  <TouchableOpacity onPress={() => Linking.openURL(message.comparedScans.scan1.listing_url)}>
+                    <Text style={styles.listingUrl}>{message.comparedScans.scan1.listing_url}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {/* Listing B Information */}
+              <View style={styles.listingInfoSection}>
+                <Text style={styles.listingLabel}>
+                  Listing B: {message.comparedScans.scan2.listing_title || 'Title not available'}
+                </Text>
+                {message.comparedScans.scan2.listing_url && (
+                  <TouchableOpacity onPress={() => Linking.openURL(message.comparedScans.scan2.listing_url)}>
+                    <Text style={styles.listingUrl}>{message.comparedScans.scan2.listing_url}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {/* Comparative Analysis */}
+              <View style={styles.analysisSection}>
+                <Text style={styles.analysisTitle}>Comparative Analysis</Text>
+                <View style={styles.analysisContent}>
+                  {renderAnswerText(message.content)}
+                </View>
+              </View>
             </View>
-          );
-        })}
+          ) : (
+            // Regular message text (matching web app whitespace-pre-wrap)
+            !isUser && !isError ? renderAnswerText(message.content) : (
+              <Text style={[styles.messageText, isError && styles.errorText]}>
+                {message.content}
+              </Text>
+            )
+          )}
+        </View>
       </View>
     );
   };
@@ -510,205 +617,95 @@ const ComparisonResultScreen = () => {
             </View>
           </View>
 
-          {/* Main Content with ScrollView */}
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.content}>
-              {/* Comparison Title */}
-              <View style={styles.titleSection}>
-                <Text style={styles.comparisonTitle}>{comparisonData?.title || 'Comparison Result'}</Text>
-                <Text style={styles.comparisonDate}>{comparisonData?.date || ''}</Text>
-              </View>
+          {/* Loading State */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8B5CF6" />
+              <Text style={styles.loadingText}>Loading comparison result...</Text>
+            </View>
+          )}
 
-              {/* Loading State */}
-              {loading && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#8B5CF6" />
-                  <Text style={styles.loadingText}>Loading comparison result...</Text>
-                </View>
-              )}
-
-              {/* Comparison Result */}
-              {!loading && comparisonResult && (
-                <View style={styles.resultContainer}>
-                  <Text style={styles.resultTitle}>Comparison Analysis</Text>
-                  {formatComparisonResult(comparisonResult.answer)}
-                </View>
-              )}
-
-              {/* No Result State */}
-              {!loading && !comparisonResult && (
-                <View style={styles.noResultContainer}>
-                  <Ionicons name="document-text-outline" size={64} color="#9CA3AF" />
-                  <Text style={styles.noResultTitle}>No Result Available</Text>
-                  <Text style={styles.noResultText}>
-                    The comparison result could not be loaded. Please try again.
-                  </Text>
-                </View>
-              )}
-
-              {/* Chat Toggle Button - Only show when comparison result is available */}
-              {!loading && comparisonResult && (
-                <View style={styles.chatToggleContainer}>
-                  <TouchableOpacity 
-                    style={styles.chatToggleButton}
-                    onPress={() => setShowChat(!showChat)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons 
-                      name={showChat ? "chatbubbles" : "chatbubbles-outline"} 
-                      size={24} 
-                      color="#FFFFFF" 
-                    />
-                    <Text style={styles.chatToggleText}>
-                      {showChat ? "Hide AI Chat" : "Ask AI Assistant"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* AI Assistant Chat Interface - Only show when chat is visible and comparison exists */}
-              {showChat && !loading && comparisonResult && (
-                <View style={styles.chatContainer}>
-                  {/* Chat Header */}
-                  <View style={styles.chatHeader}>
-                    <View style={styles.chatHeaderLeft}>
-                      <View style={styles.chatAvatar}>
-                        <Ionicons name="chatbubble" size={20} color="#000000" />
-                      </View>
-                      <View style={styles.chatHeaderInfo}>
-                        <Text style={styles.chatHeaderTitle}>BookYolo AI</Text>
-                        <Text style={styles.chatHeaderSubtitle}>Ask me anything about this comparison</Text>
+          {/* Messages Area - Display comparison results as messages (matching web app and CompareScreen) */}
+          {!loading && messages.length > 0 && (
+            <View style={styles.messagesArea}>
+              <ScrollView 
+                style={styles.messagesScrollView}
+                contentContainerStyle={styles.messagesContent}
+                showsVerticalScrollIndicator={false}
+                ref={flatListRef}
+                onContentSizeChange={() => scrollToBottom()}
+                onLayout={() => scrollToBottom()}
+                keyboardShouldPersistTaps="handled"
+              >
+                {messages.map((message, index) => renderMessage(message, index))}
+                {isAsking && (
+                  <View style={styles.typingIndicator}>
+                    <View style={styles.typingBubble}>
+                      <View style={styles.typingDots}>
+                        <View style={[styles.typingDot, styles.typingDot1]} />
+                        <View style={[styles.typingDot, styles.typingDot2]} />
+                        <View style={[styles.typingDot, styles.typingDot3]} />
                       </View>
                     </View>
                   </View>
-                  
-                  {/* Chat Messages Area */}
-                  <ScrollView 
-                    style={styles.chatMessagesContainer}
-                    contentContainerStyle={styles.chatMessagesContent}
-                    showsVerticalScrollIndicator={true}
-                    ref={flatListRef}
-                    onContentSizeChange={() => scrollToBottom()}
-                    onLayout={() => scrollToBottom()}
-                  >
-                    {messages.length === 0 ? (
-                      <View style={styles.welcomeMessage}>
-                        <View style={styles.welcomeBubble}>
-                          <Ionicons name="sparkles" size={24} color="#000000" />
-                          <Text style={styles.welcomeText}>
-                            Hi! I'm here to help you understand this comparison better. What would you like to know about these two listings?
-                          </Text>
-                        </View>
-                      </View>
-                    ) : (
-                      messages.map((item, index) => (
-                        <View
-                          key={item.id || `message-${index}`}
-                          style={[
-                            styles.messageContainer,
-                            item.type === "user" ? styles.userMessageContainer : styles.botMessageContainer,
-                          ]}
-                        >
-                          {item.type === "bot" && (
-                            <View style={styles.botAvatar}>
-                              <Ionicons name="chatbubble" size={16} color="#000000" />
-                            </View>
-                          )}
-                          <View
-                            style={[
-                              styles.messageBubble,
-                              item.type === "user" ? styles.userMessage : styles.botMessage,
-                            ]}
-                          >
-                            <Text style={item.type === "user" ? styles.messageTextOnPrimary : styles.messageText}>
-                              {item.text}
-                            </Text>
-                            <Text style={[
-                              styles.messageTime,
-                              item.type === "user" ? styles.messageTimeOnPrimary : styles.messageTimeOnSecondary
-                            ]}>
-                              {new Date().toLocaleTimeString('en-US', { 
-                                hour: 'numeric', 
-                                minute: '2-digit',
-                                hour12: true 
-                              })}
-                            </Text>
-                          </View>
-                        </View>
-                      ))
-                    )}
-                    {isAsking && (
-                      <View style={styles.typingIndicator}>
-                        <View style={styles.typingBubble}>
-                          <View style={styles.typingDots}>
-                            <View style={[styles.typingDot, styles.typingDot1]} />
-                            <View style={[styles.typingDot, styles.typingDot2]} />
-                            <View style={[styles.typingDot, styles.typingDot3]} />
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                  </ScrollView>
-                </View>
-              )}
+                )}
+              </ScrollView>
             </View>
-          </ScrollView>
+          )}
 
-          {/* Zero Scans Warning - Only show when chat is visible and scans are zero */}
-          {showChat && !loading && comparisonResult && scanBalance?.remaining <= 0 && (
-            <View style={styles.zeroScansChatWarning}>
-              <Text style={styles.zeroScansChatText}>
-                ⚠️ You need at least 0.5 scans to chat with AI assistant. Please{' '}
-                <Text 
-                  style={styles.upgradeLinkText}
-                  onPress={() => navigation.navigate('PlanStatus')}
-                >
-                  upgrade to premium plan
-                </Text>
-                {' '}to get more scans.
+          {/* No Result State */}
+          {!loading && !comparisonResult && messages.length === 0 && (
+            <View style={styles.noResultContainer}>
+              <Ionicons name="document-text-outline" size={64} color="#9CA3AF" />
+              <Text style={styles.noResultTitle}>No Result Available</Text>
+              <Text style={styles.noResultText}>
+                The comparison result could not be loaded. Please try again.
               </Text>
             </View>
           )}
 
-          {/* AI Assistant Input Area - Only show when chat is visible and comparison exists */}
-          {showChat && !loading && comparisonResult && (
-            <View style={[styles.chatInputContainer, { paddingBottom: Math.max(insets.bottom + 10, 20) }]}>
-              <View style={styles.chatInputWrapper}>
-                <View style={styles.chatInputCenter}>
+          {/* Input Area - Same as CompareScreen (same as web app) */}
+          {!loading && messages.length > 0 && (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            >
+              <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom + 10, 20) }]}>
+                <View style={styles.inputWrapper}>
                   <TextInput
-                    style={[styles.chatInput, (isAsking || scanBalance?.remaining <= 0) && styles.disabledInput]}
-                    placeholder={scanBalance?.remaining <= 0 ? "No scans left..." : "ask follow up questions about this comparison..."}
-                    placeholderTextColor="#9CA3AF"
+                    style={styles.textInput}
                     value={question}
                     onChangeText={setQuestion}
-                    returnKeyType="send"
-                    onSubmitEditing={handleSend}
+                    placeholder="Scan or Ask Anything…"
+                    placeholderTextColor="#999"
                     multiline
+                    maxLength={1000}
                     editable={!isAsking && scanBalance?.remaining > 0}
+                    onSubmitEditing={handleSend}
+                    returnKeyType="send"
                   />
-                </View>
-                
-                <View style={styles.chatInputRight}>
-                  <TouchableOpacity 
-                    style={[styles.sendButton, (isAsking || scanBalance?.remaining <= 0) && styles.disabledButton]} 
-                    onPress={handleSend} 
-                    activeOpacity={0.8}
-                    disabled={isAsking || scanBalance?.remaining <= 0}
+                  <TouchableOpacity
+                    style={[styles.sendButton, (!question.trim() || isAsking || scanBalance?.remaining <= 0) && styles.sendButtonDisabled]}
+                    onPress={handleSend}
+                    disabled={!question.trim() || isAsking || scanBalance?.remaining <= 0}
+                    activeOpacity={0.7}
                   >
                     {isAsking ? (
-                      <ActivityIndicator color="black" size="small" />
+                      <View style={styles.sendButtonLoadingContainer}>
+                        <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                        <Text style={styles.sendButtonLoadingText}>Processing...</Text>
+                      </View>
                     ) : (
-                      <Ionicons name="send" size={20} color="#000000" />
+                      <Image 
+                        source={require('../assets/book2.png')} 
+                        style={styles.sendButtonIcon}
+                        resizeMode="contain"
+                      />
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -790,6 +787,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
   },
@@ -1160,6 +1159,176 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#B0B0B0',
+  },
+  // Messages Area Styles (matching CompareScreen)
+  messagesArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  messagesScrollView: {
+    flex: 1,
+  },
+  messagesContent: {
+    flexGrow: 1,
+    padding: 16,
+    paddingBottom: 20,
+  },
+  messageContainer: {
+    marginBottom: 16,
+    width: '100%',
+  },
+  userMessageContainer: {
+    alignItems: 'flex-end',
+  },
+  assistantMessageContainer: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '85%',
+    borderRadius: 16,
+    padding: 16,
+  },
+  userMessageBubble: {
+    backgroundColor: "#f3f4f6",
+  },
+  assistantMessageBubble: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e9e8ea",
+  },
+  errorMessageBubble: {
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  messageText: {
+    fontSize: 16,
+    color: "#070707",
+    lineHeight: 24,
+    flexWrap: 'wrap',
+  },
+  errorText: {
+    color: "#dc2626",
+  },
+  linkText: {
+    color: "#3b82f6",
+    textDecorationLine: 'underline',
+  },
+  // Comparison Result Styles (matching web app)
+  comparisonResultContainer: {
+    width: '100%',
+  },
+  listingInfoSection: {
+    marginBottom: 16,
+  },
+  listingLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#070707",
+    marginBottom: 8,
+  },
+  listingUrl: {
+    fontSize: 12,
+    color: "#3b82f6",
+    textDecorationLine: 'underline',
+  },
+  analysisSection: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#e9e8ea",
+  },
+  analysisTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#070707",
+    marginBottom: 12,
+  },
+  analysisContent: {
+    width: '100%',
+  },
+  typingIndicator: {
+    alignItems: 'flex-start',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  typingBubble: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e9e8ea",
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#9ca3af",
+    marginHorizontal: 2,
+  },
+  typingDot1: {
+    opacity: 0.4,
+  },
+  typingDot2: {
+    opacity: 0.6,
+  },
+  typingDot3: {
+    opacity: 0.8,
+  },
+  // Input Area Styles (matching CompareScreen)
+  inputContainer: {
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  textInput: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e9e8ea",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#070707",
+    textAlignVertical: 'top',
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#1e162a",
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendButtonIcon: {
+    width: 24,
+    height: 24,
+  },
+  sendButtonLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonLoadingText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

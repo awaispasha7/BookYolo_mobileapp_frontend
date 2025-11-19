@@ -108,12 +108,94 @@ export default function MainTabs() {
       <Tab.Screen 
         name="Scan" 
         component={ScanScreen}
-        options={{ tabBarLabel: "Scan" }}
+        options={({ navigation, route: screenRoute }) => ({
+          tabBarLabel: "New Scan",
+          tabBarButton: (props) => {
+            const { children, onPress, accessibilityState } = props;
+            const isFocused = accessibilityState?.selected;
+            
+            // Custom handler for Scan tab - always trigger reset when pressed
+            const handlePress = () => {
+              // Always set reset parameter when Scan tab is pressed (whether focused or not)
+              const timestamp = Date.now();
+              navigation.setParams({ reset: true, timestamp });
+              // Navigate to Scan screen with reset parameter
+              navigation.navigate('Scan', { reset: true, timestamp });
+              // Also call onPress for normal tab navigation behavior
+              if (!isFocused) {
+                onPress();
+              }
+            };
+            
+            return (
+              <TouchableOpacity
+                {...props}
+                onPress={handlePress}
+                activeOpacity={0.7}
+                delayPressIn={0}
+                delayPressOut={0}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 6,
+                  backgroundColor: isFocused ? '#f8f9fa' : 'transparent',
+                  borderRadius: 12,
+                  marginHorizontal: 4,
+                  marginVertical: 2,
+                }}
+              >
+                {children}
+              </TouchableOpacity>
+            );
+          },
+        })}
       />
       <Tab.Screen 
         name="Compare" 
         component={CompareScreen}
-        options={{ tabBarLabel: "Compare" }}
+        options={({ navigation, route: screenRoute }) => ({
+          tabBarLabel: "New Compare",
+          tabBarButton: (props) => {
+            const { children, onPress, accessibilityState } = props;
+            const isFocused = accessibilityState?.selected;
+            
+            // Custom handler for Compare tab - always trigger reset when pressed
+            const handlePress = () => {
+              // Always set reset parameter when Compare tab is pressed (whether focused or not)
+              const timestamp = Date.now();
+              navigation.setParams({ reset: true, timestamp });
+              // Navigate to Compare screen with reset parameter
+              navigation.navigate('Compare', { reset: true, timestamp });
+              // Also call onPress for normal tab navigation behavior
+              if (!isFocused) {
+                onPress();
+              }
+            };
+            
+            return (
+              <TouchableOpacity
+                {...props}
+                onPress={handlePress}
+                activeOpacity={0.7}
+                delayPressIn={0}
+                delayPressOut={0}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 6,
+                  backgroundColor: isFocused ? '#f8f9fa' : 'transparent',
+                  borderRadius: 12,
+                  marginHorizontal: 4,
+                  marginVertical: 2,
+                }}
+              >
+                {children}
+              </TouchableOpacity>
+            );
+          },
+        })}
       />
       <Tab.Screen 
         name="History" 
