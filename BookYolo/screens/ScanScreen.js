@@ -396,6 +396,14 @@ export default function ScanScreen({ navigation, route }) {
     const userMessage = { role: "user", content: `Scan ${url}`, messageType: "scan" };
     setMessages(prev => [...prev, userMessage]);
 
+    // Add typing indicator
+    const typingIndicator = { 
+      role: "assistant", 
+      content: "", 
+      isTyping: true 
+    };
+    setMessages(prev => [...prev, typingIndicator]);
+
     try {
       const { data, error } = await apiClient.createNewScan(url);
       
@@ -416,13 +424,16 @@ export default function ScanScreen({ navigation, route }) {
       
       // Show scan result directly in chat (same as web app - no separate screen)
       if (data.scan) {
-        // Add assistant response with scan result
-        const assistantMessage = {
-          role: "assistant",
-          content: "", // No content - only show the detailed scan result
-          scanData: data.scan
-        };
-        setMessages(prev => [...prev, assistantMessage]);
+        // Remove typing indicator and add assistant response with scan result
+        setMessages(prev => {
+          const filtered = prev.filter(msg => !msg.isTyping);
+          const assistantMessage = {
+            role: "assistant",
+            content: "", // No content - only show the detailed scan result
+            scanData: data.scan
+          };
+          return [...filtered, assistantMessage];
+        });
         
         // Add post-scan message
         const postScanMessage = {
@@ -451,12 +462,15 @@ export default function ScanScreen({ navigation, route }) {
     } catch (e) {
       setError(e.message || String(e));
       
-      // Add error message
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `Sorry, I couldn't scan that listing. ${e.message}`,
-        isError: true
-      }]);
+      // Remove typing indicator and add error message
+      setMessages(prev => {
+        const filtered = prev.filter(msg => !msg.isTyping);
+        return [...filtered, {
+          role: "assistant",
+          content: `Sorry, I couldn't scan that listing. ${e.message}`,
+          isError: true
+        }];
+      });
     } finally {
       setIsLoading(false);
     }
@@ -573,9 +587,11 @@ export default function ScanScreen({ navigation, route }) {
         const { data: fetchedScanData, error } = await apiClient.getScanById(scanId);
         
         if (!error && fetchedScanData && fetchedScanData.analysis) {
-          // Scan is complete - update the scan data in messages
+          // Scan is complete - remove typing indicator and update the scan data in messages
           setMessages(prev => {
-            const updatedMessages = [...prev];
+            // Remove typing indicators
+            const filtered = prev.filter(msg => !msg.isTyping);
+            const updatedMessages = [...filtered];
             // Find the last assistant message with scanData and update it
             for (let i = updatedMessages.length - 1; i >= 0; i--) {
               if (updatedMessages[i].role === "assistant" && updatedMessages[i].scanData) {
@@ -683,9 +699,30 @@ export default function ScanScreen({ navigation, route }) {
     return <Text style={styles.messageText}>{text}</Text>;
   };
 
+  // Typing indicator component with animated dots
+  const TypingIndicator = () => {
+    const [dotCount, setDotCount] = useState(1);
+    
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setDotCount(prev => (prev >= 3 ? 1 : prev + 1));
+      }, 500);
+      return () => clearInterval(interval);
+    }, []);
+    
+    return (
+      <View style={styles.typingIndicatorContainer}>
+        <Text style={styles.typingIndicatorText}>
+          Processing{'.'.repeat(dotCount)}
+        </Text>
+      </View>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === "user";
     const isError = message.isError;
+    const isTyping = message.isTyping;
     const isPostScanMessage = !isUser && !isError && message.content && 
       message.content.includes("Do you have any questions about this scan");
     
@@ -701,7 +738,9 @@ export default function ScanScreen({ navigation, route }) {
           isError && styles.errorMessageBubble,
           isPostScanMessage && styles.postScanMessageBubble
         ]}>
-          {!isUser && !isError && message.scanData ? (
+          {isTyping ? (
+            <TypingIndicator />
+          ) : !isUser && !isError && message.scanData ? (
             // Detailed scan result display (matching web app)
             <View style={styles.scanResultContainer}>
               {/* Information */}
@@ -1242,5 +1281,15 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#3b82f6",
     textDecorationLine: 'underline',
+  },
+  typingIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  typingIndicatorText: {
+    fontSize: 16,
+    color: "#070707",
+    fontStyle: 'italic',
   },
 });

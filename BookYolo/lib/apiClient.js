@@ -3,6 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Backend API Configuration
 const API_BASE_URL = 'https://bookyolo-backend.vercel.app'; // Update with your actual backend URL
+// const API_BASE_URL = '192.168.100.12:8000'; // Update with your actual backend URL
+// const API_BASE_URL = 'http://192.168.100.12:8000'; // Update with your actual backend URL
+
 const API_TIMEOUT = 30000; // 30 seconds
 
 class ApiClient {
