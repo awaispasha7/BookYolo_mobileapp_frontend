@@ -15,13 +15,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
-  Linking
+  Linking,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../lib/apiClient';
 import { useAuth } from '../context/AuthProvider';
+import { BOOK1_LOGO } from '../constants/images';
 
 const CompareScreen = ({ navigation, route }) => {
   const { refreshUser, scanBalance, refreshScanBalance } = useAuth();
@@ -36,6 +38,7 @@ const CompareScreen = ({ navigation, route }) => {
   const [showSecondDropdown, setShowSecondDropdown] = useState(false);
   const [recentCompares, setRecentCompares] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRecentComparesModal, setShowRecentComparesModal] = useState(false);
   const isLoadingRef = useRef(false);
   
   // AI Assistant state
@@ -526,6 +529,8 @@ const CompareScreen = ({ navigation, route }) => {
 
   const handleRecentComparePress = async (compare) => {
     try {
+      // Close modal when a compare is selected
+      setShowRecentComparesModal(false);
       // console.log('🔍 RECENT COMPARE: Clicked on:', compare);
       
       // For backend comparisons, we need to fetch the full chat data (same as web frontend)
@@ -727,7 +732,7 @@ const CompareScreen = ({ navigation, route }) => {
         if (compare.firstListing && compare.secondListing) {
           localMessages.push({
             role: "user",
-            content: `Compare: ${compare.firstListing.listing_title || compare.firstListing.location} vs ${compare.secondListing.listing_title || compare.secondListing.location}`,
+            content: `Compare these listings`,
             messageType: "compare",
             timestamp: compare.createdAt
           });
@@ -928,9 +933,10 @@ const CompareScreen = ({ navigation, route }) => {
         // Add messages to display comparison result (matching web app)
         const userMessage = {
           role: "user",
+          // content: `Compare: ${compare.firstListing.listing_title || compare.firstListing.location} vs ${compare.secondListing.listing_title || compare.secondListing.location}`,
           content: comparisonQuestion 
-            ? `Compare: ${firstListing.listing_title || firstListing.location} vs ${secondListing.listing_title || secondListing.location}. ${comparisonQuestion}`
-            : `Compare: ${firstListing.listing_title || firstListing.location} vs ${secondListing.listing_title || secondListing.location}`,
+            ? `Compare these listings. ${comparisonQuestion}`
+            : `Compare these listings`,
           messageType: "compare"
         };
         
@@ -1307,12 +1313,14 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           } else if (data && data.answer) {
             const newMessages = [...updatedMessages, { 
               role: "assistant", 
               content: data.answer
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after response
             
             // /compare endpoint automatically deducts 0.5 scans from backend (same as web app)
             await deductScanFromBalance();
@@ -1330,6 +1338,7 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           }
         } catch (apiError) {
           const newMessages = [...updatedMessages, { 
@@ -1338,8 +1347,7 @@ const CompareScreen = ({ navigation, route }) => {
             isError: true
           }];
           setMessages(newMessages);
-        } finally {
-          setIsAsking(false);
+          setIsAsking(false); // Hide typing indicator immediately after error
         }
       } else if (chatId && !chatId.startsWith('compare-')) {
         // Use backend chat system for non-local chats (same as web app)
@@ -1444,6 +1452,7 @@ const CompareScreen = ({ navigation, route }) => {
                       content: compareData.answer
                     }];
                     setMessages(newMessages);
+                    setIsAsking(false); // Hide typing indicator immediately after response
                     
                     await deductScanFromBalance();
                     try {
@@ -1479,6 +1488,7 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           } else if (data && data.answer) {
             // Use backend AI response
             const newMessages = [...updatedMessages, { 
@@ -1486,6 +1496,7 @@ const CompareScreen = ({ navigation, route }) => {
               content: data.answer
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after response
             
             // Backend chat system automatically saves messages to database (same as web app)
             // Deduct 0.5 scans from local balance after successful AI chat
@@ -1505,6 +1516,7 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           }
         } catch (apiError) {
           // Handle unexpected errors
@@ -1516,8 +1528,7 @@ const CompareScreen = ({ navigation, route }) => {
             isError: true
           }];
           setMessages(newMessages);
-        } finally {
-          setIsAsking(false);
+          setIsAsking(false); // Hide typing indicator immediately after error
         }
       } else if (comparisonResult && firstListing && secondListing) {
         // Use /compare endpoint for AI chat questions (same as recent compare)
@@ -1555,6 +1566,7 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           } else if (data && data.answer) {
             // Use backend AI response from /compare endpoint
             const newMessages = [...updatedMessages, { 
@@ -1562,6 +1574,7 @@ const CompareScreen = ({ navigation, route }) => {
               content: data.answer
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after response
             
             // /compare endpoint automatically deducts 0.5 scans from backend (same as web app)
             // Deduct 0.5 scans from local balance after successful AI chat
@@ -1581,6 +1594,7 @@ const CompareScreen = ({ navigation, route }) => {
               isError: true
             }];
             setMessages(newMessages);
+            setIsAsking(false); // Hide typing indicator immediately after error
           }
         } catch (apiError) {
           console.error('❌ Error with /compare endpoint:', apiError);
@@ -1592,6 +1606,7 @@ const CompareScreen = ({ navigation, route }) => {
             isError: true
           }];
           setMessages(errorMessages);
+          setIsAsking(false); // Hide typing indicator immediately after error
           
           // Fallback to local AI response after a short delay (same as recent compare)
           setTimeout(async () => {
@@ -1608,6 +1623,7 @@ const CompareScreen = ({ navigation, route }) => {
               content: aiResponse
             }];
             setMessages(fallbackMessages);
+            setIsAsking(false); // Hide typing indicator immediately after response
             
             // Deduct 0.5 scans from local balance for local AI responses
             await deductScanFromBalance();
@@ -1635,6 +1651,7 @@ const CompareScreen = ({ navigation, route }) => {
           content: aiResponse
         }];
         setMessages(newMessages);
+        setIsAsking(false); // Hide typing indicator immediately after response
         
         // Deduct 0.5 scans from local balance for local AI responses
         await deductScanFromBalance();
@@ -1675,7 +1692,10 @@ const CompareScreen = ({ navigation, route }) => {
         scrollToBottom();
       }, 100);
     } finally {
-      setIsAsking(false);
+      // Only set to false if it's still true (in case of unexpected errors)
+      if (isAsking) {
+        setIsAsking(false);
+      }
     }
   };
 
@@ -1732,19 +1752,24 @@ const CompareScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafb" />
       
-      {/* Header with Logo and Version */}
+      {/* Header with Logo and Recent Compare Button */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
+        <TouchableOpacity 
+          style={styles.recentCompareButton}
+          onPress={() => setShowRecentComparesModal(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="time-outline" size={20} color="#374151" />
+          <Text style={styles.recentCompareButtonText}>Recent Compares</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Beautiful Title - Only show when no messages (matching web app) */}
@@ -1871,44 +1896,6 @@ const CompareScreen = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Recent Compares Section - Always show like web version */}
-            <View style={styles.recentComparesContainer}>
-              <Text style={styles.recentComparesTitle}>Recent Compares</Text>
-              {recentCompares.length > 0 ? (
-                <ScrollView 
-                  style={styles.recentComparesList}
-                  horizontal={true}
-                  showsHorizontalScrollIndicator={false}
-                >
-                  {recentCompares.map((compare, index) => (
-                    <TouchableOpacity 
-                      key={compare.id} 
-                      style={[
-                        styles.recentCompareItem,
-                        index === 0 && styles.recentCompareItemActive
-                      ]}
-                      onPress={() => handleRecentComparePress(compare)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.recentCompareTitle,
-                        index === 0 && styles.recentCompareTitleActive
-                      ]} numberOfLines={2}>
-                        {compare.title}
-                      </Text>
-                      <Text style={[
-                        styles.recentCompareDate,
-                        index === 0 && styles.recentCompareDateActive
-                      ]}>
-                        {compare.date}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              ) : (
-                <Text style={styles.noRecentComparesText}>No recent comparisons yet</Text>
-              )}
-            </View>
           </View>
         </ScrollView>
       ) : null}
@@ -1961,14 +1948,18 @@ const CompareScreen = ({ navigation, route }) => {
                 returnKeyType="send"
               />
               <TouchableOpacity
-                style={[styles.sendButton, (!question.trim() || isAsking) && styles.sendButtonDisabled]}
+                style={[
+                  styles.sendButton, 
+                  question.trim() && !isAsking && styles.sendButtonActive,
+                  (!question.trim() || isAsking) && styles.sendButtonDisabled
+                ]}
                 onPress={handleSend}
                 disabled={!question.trim() || isAsking}
                 activeOpacity={0.7}
               >
                 {isAsking ? (
                   <View style={styles.sendButtonLoadingContainer}>
-                    <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                    <ActivityIndicator size="small" color="#1e162a" style={{ marginRight: 8 }} />
                     <Text style={styles.sendButtonLoadingText}>Processing...</Text>
                   </View>
                 ) : (
@@ -1976,6 +1967,7 @@ const CompareScreen = ({ navigation, route }) => {
                     source={require('../assets/book2.png')} 
                     style={styles.sendButtonIcon}
                     resizeMode="contain"
+                    tintColor={question.trim() ? "#ffffff" : undefined}
                   />
                 )}
               </TouchableOpacity>
@@ -1983,6 +1975,52 @@ const CompareScreen = ({ navigation, route }) => {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Recent Compares Modal */}
+      <Modal
+        visible={showRecentComparesModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRecentComparesModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Recent Compares</Text>
+              <TouchableOpacity
+                onPress={() => setShowRecentComparesModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalScrollView}>
+              {recentCompares.length > 0 ? (
+                recentCompares.map((compare, index) => (
+                  <TouchableOpacity
+                    key={compare.id}
+                    style={styles.modalCompareItem}
+                    onPress={() => handleRecentComparePress(compare)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.modalCompareTitle} numberOfLines={2}>
+                      {compare.title}
+                    </Text>
+                    <Text style={styles.modalCompareDate}>
+                      {compare.date}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.modalEmptyContainer}>
+                  <Text style={styles.modalEmptyText}>No recent comparisons yet</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
     </SafeAreaView>
   );
@@ -2009,29 +2047,30 @@ const styles = StyleSheet.create({
     top: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 7,
   },
   logo: {
     width: 45,
     height: 45,
   },
-  versionContainer: {
+  recentCompareButton: {
     position: 'absolute',
     right: 20,
-    top: 23,
+    top: 15,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 90,
-    height: 40,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    marginTop: 10,
   },
-  versionText: {
-    fontSize: 10,
+  recentCompareButtonText: {
+    fontSize: 12,
     color: "#374151",
     fontWeight: "600",
-    textAlign: 'center',
-    letterSpacing: 0.2,
+    marginLeft: 6,
   },
   scrollView: {
     flex: 1,
@@ -2607,12 +2646,17 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 44,
+    minWidth: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#1e162a",
+    backgroundColor: "#d1d5db",
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
+    paddingHorizontal: 12,
+  },
+  sendButtonActive: {
+    backgroundColor: "#1e162a",
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -2627,9 +2671,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendButtonLoadingText: {
-    color: '#ffffff',
+    color: '#1e162a',
     fontSize: 14,
     fontWeight: '600',
+  },
+  sendButtonLoadingTextActive: {
+    color: '#ffffff',
   },
   // Messages Area Styles (matching ScanScreen)
   messagesArea: {
@@ -2655,9 +2702,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '85%',
+    maxWidth: '99%',
     borderRadius: 16,
     padding: 16,
+    marginLeft: 3.5,
   },
   userMessageBubble: {
     backgroundColor: "#f3f4f6",
@@ -2749,6 +2797,65 @@ const styles = StyleSheet.create({
   },
   typingDot3: {
     opacity: 0.8,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalScrollView: {
+    maxHeight: '100%',
+  },
+  modalCompareItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  modalCompareTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  modalCompareDate: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  modalEmptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalEmptyText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
   },
 });
 

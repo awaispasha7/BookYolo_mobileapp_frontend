@@ -16,6 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "../lib/apiClient";
+import { BOOK1_LOGO } from "../constants/images";
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
@@ -315,19 +316,26 @@ export default function HistoryScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafb" />
       
-      {/* Header with Logo and Version */}
+      {/* Header with Logo and Profile Button */}
       <View style={styles.topHeader}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
+        <TouchableOpacity 
+          style={styles.profileButtonContainer}
+          onPress={() => navigation.navigate('Account')}
+          activeOpacity={0.6}
+        >
+          <View style={styles.profileIcon}>
+            <Ionicons name="person" size={24} color="#ffffff" />
+          </View>
+          <Text style={styles.profileLabel}>Profile</Text>
+        </TouchableOpacity>
       </View>
       
       {renderHeader()}
@@ -363,7 +371,7 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: 'transparent',
@@ -376,29 +384,11 @@ const styles = StyleSheet.create({
     top: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 7,
   },
   logo: {
     width: 45,
     height: 45,
-  },
-  versionContainer: {
-    position: 'absolute',
-    right: 20,
-    top: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    height: 40,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 10,
-    color: "#374151",
-    fontWeight: "600",
-    textAlign: 'center',
-    letterSpacing: 0.2,
   },
   loadingContainer: {
     flex: 1,
@@ -579,5 +569,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  profileButtonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    marginTop: 3,
+  },
+  profileIcon: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 22,
+    backgroundColor: "#1e162a",
+    shadowColor: "#1e162a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  profileLabel: {
+    fontSize: 10,
+    color: "#1e162a",
+    fontWeight: "600",
+    marginTop: 4,
+    textAlign: "center",
   },
 });

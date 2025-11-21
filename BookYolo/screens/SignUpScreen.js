@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Linking, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Pressable, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
+import { YOLO_LOGO } from '../constants/images';
 
 const { width, height } = Dimensions.get('window');
 
@@ -232,7 +233,7 @@ const SignUpScreen = ({ navigation, route }) => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.fixedBrandingContainer}>
           <Image 
-            source={require('../assets/yolo.jpg')} 
+            source={YOLO_LOGO} 
             style={styles.centerLogo}
             resizeMode="contain"
           />

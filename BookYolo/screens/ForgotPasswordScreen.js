@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaVie
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import apiClient from '../lib/apiClient';
+import { BOOK1_LOGO } from '../constants/images';
 
 const { width, height } = Dimensions.get('window');
 
@@ -170,7 +171,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               
               <View style={styles.headerLogoContainer}>
                 <Image 
-                  source={require('../assets/book1.jpg')} 
+                  source={BOOK1_LOGO} 
                   style={styles.logo}
                   resizeMode="contain"
                 />

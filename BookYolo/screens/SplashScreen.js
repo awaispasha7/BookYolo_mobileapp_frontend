@@ -10,6 +10,7 @@ import Animated, {
   Easing,
   withSpring
 } from 'react-native-reanimated';
+import { BOOK1_LOGO } from '../constants/images';
 
 const SplashScreen = ({ navigation }) => {
   const scale = useSharedValue(1);
@@ -96,7 +97,7 @@ const SplashScreen = ({ navigation }) => {
         {/* BookYolo Logo with Image */}
         <View style={styles.logoPlaceholder}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -158,16 +159,9 @@ const styles = StyleSheet.create({
   logoPlaceholder: {
     width: 180,
     height: 120,
-    borderRadius: 60,
-    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#1e162a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
   },
   logoImage: {
     width: 100,

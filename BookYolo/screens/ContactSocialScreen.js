@@ -12,6 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -69,15 +70,12 @@ const ContactSocialScreen = ({ navigation }) => {
         
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
       </View>
 
       <ScrollView 
@@ -85,33 +83,41 @@ const ContactSocialScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Contact Support Content - Matching Web App */}
+        {/* Contact Support Content */}
         <View style={styles.contentCard}>
+          {/* Icon Section */}
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="mail" size={24} color="#1F2937" />
+              <Ionicons name="mail" size={28} color="#1F2937" />
             </View>
           </View>
           
+          {/* Title Section */}
           <Text style={styles.title}>Contact Support</Text>
           <Text style={styles.subtitle}>Get help from our support team</Text>
           
-          {/* Email Section - Matching Web App */}
+          {/* Email Section */}
           <View style={styles.emailBox}>
             <Text style={styles.emailLabel}>Email us at:</Text>
             <View style={styles.emailRow}>
-              <Text style={styles.emailAddress}>help@bookyolo.com</Text>
-              <TouchableOpacity onPress={copyEmailToClipboard}>
-                <Text style={styles.copyButton}>Copy</Text>
+              <Text style={styles.emailAddress} numberOfLines={1} ellipsizeMode="tail">help@bookyolo.com</Text>
+              <TouchableOpacity 
+                style={styles.copyButtonContainer}
+                onPress={copyEmailToClipboard}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.copyButtonText}>Copy</Text>
               </TouchableOpacity>
             </View>
           </View>
           
-          {/* Action Buttons - Matching Web App */}
+          {/* Action Buttons */}
           <TouchableOpacity
             style={styles.gmailButton}
             onPress={openGmail}
+            activeOpacity={0.8}
           >
+            <Ionicons name="mail" size={18} color="#ffffff" style={styles.gmailButtonIcon} />
             <Text style={styles.gmailButtonText}>Open Gmail</Text>
           </TouchableOpacity>
 
@@ -124,6 +130,7 @@ const ContactSocialScreen = ({ navigation }) => {
                 navigation.navigate('Settings');
               }
             }}
+            activeOpacity={0.7}
           >
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
@@ -140,6 +147,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     backgroundColor: '#fff',
+    
   },
   header: {
     flexDirection: 'row',
@@ -150,6 +158,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 60,
     position: 'relative',
+    
   },
   backButtonContainer: {
     position: 'absolute',
@@ -159,32 +168,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 65,
   },
   logo: {
     width: 45,
     height: 45,
-  },
-  versionContainer: {
-    position: 'absolute',
-    right: 20,
-    top: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
@@ -194,105 +188,143 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+    marginTop: 50,
   },
   contentCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
+    borderRadius: 16,
+    padding: 28,
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
-    shadowColor: "rgba(0, 0, 0, 0.1)",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   iconContainer: {
     alignItems: 'center',
     marginBottom: 24,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#1F2937',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
+    fontWeight: '400',
+    lineHeight: 22,
   },
   emailBox: {
     backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   emailLabel: {
     fontSize: 14,
     color: '#6B7280',
-    marginBottom: 8,
+    fontWeight: '400',
+    marginBottom: 10,
   },
   emailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   emailAddress: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1F2937',
     flex: 1,
+    minWidth: 0,
   },
-  copyButton: {
+  copyButtonContainer: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  copyButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#6B7280',
   },
   gmailButton: {
     width: '100%',
     backgroundColor: '#1F2937',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    flexDirection: 'row',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  gmailButtonIcon: {
+    marginRight: 8,
   },
   gmailButtonText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   closeButton: {
     width: '100%',
-    backgroundColor: '#D1D5DB',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   closeButtonText: {
     color: '#374151',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
 

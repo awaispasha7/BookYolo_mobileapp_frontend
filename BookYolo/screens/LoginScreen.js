@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useAuth } from '../context/AuthProvider';
+import { YOLO_LOGO } from '../constants/images';
 
 const { width, height } = Dimensions.get('window');
 
@@ -142,7 +143,7 @@ const LoginScreen = ({ navigation }) => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.fixedBrandingContainer}>
           <Image 
-            source={require('../assets/yolo.jpg')} 
+            source={YOLO_LOGO} 
             style={styles.centerLogo}
             resizeMode="contain"
           />

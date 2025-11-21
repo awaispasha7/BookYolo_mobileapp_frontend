@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../lib/apiClient';
 import { useAuth } from '../context/AuthProvider';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component - same as AccountScreen
 function BackButton({ onPress, style }) {
@@ -606,15 +607,12 @@ const ComparisonResultScreen = () => {
             
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/book1.jpg')} 
+                source={BOOK1_LOGO} 
                 style={styles.logo}
                 resizeMode="contain"
               />
             </View>
             
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-            </View>
           </View>
 
           {/* Loading State */}
@@ -745,23 +743,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 45,
     height: 45,
-  },
-  versionContainer: {
-    position: 'absolute',
-    right: 20,
-    top: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../lib/apiClient';
 import { useAuth } from '../context/AuthProvider';
 import notificationService from '../lib/notificationService';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -240,7 +241,7 @@ const UpgradeScreen = ({ navigation }) => {
         
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
@@ -328,6 +329,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#1e162a',
     marginBottom: 20,
+    marginTop: 30,
   },
   header: {
     flexDirection: 'row',
@@ -347,11 +349,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 65,
   },
   logo: {
     width: 45,
@@ -360,7 +364,7 @@ const styles = StyleSheet.create({
   versionContainer: {
     position: 'absolute',
     right: 20,
-    top: 15,
+    top: 35,
     alignItems: 'center',
     justifyContent: 'center',
     width: 90,

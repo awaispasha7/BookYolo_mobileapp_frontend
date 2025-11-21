@@ -24,6 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from "../lib/apiClient";
 import { useAuth } from "../context/AuthProvider";
+import { BOOK1_LOGO } from "../constants/images";
 
 const { width } = Dimensions.get("window");
 
@@ -988,7 +989,7 @@ export default function ScanResultScreen({ route, navigation }) {
               
               <View style={styles.logoContainer}>
                 <Image 
-                  source={require('../assets/book1.jpg')} 
+                  source={BOOK1_LOGO} 
                   style={styles.logo}
                   resizeMode="contain"
                 />

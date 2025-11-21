@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import apiClient from '../lib/apiClient';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -375,15 +376,12 @@ export default function PlanStatusScreen({ navigation }) {
         
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
       </View>
 
       <ScrollView 
@@ -391,12 +389,14 @@ export default function PlanStatusScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Account Header - Matching Web App */}
-        <View style={styles.accountHeader}>
+        {/* Account Header */}
+        {/* <View style={styles.accountHeader}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
-            </Text>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>
+                {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
+              </Text>
+            </View>
           </View>
           {currentUser?.full_name && (
             <Text style={styles.userName}>{currentUser.full_name}</Text>
@@ -404,32 +404,55 @@ export default function PlanStatusScreen({ navigation }) {
           {currentUser?.email && (
             <Text style={styles.userEmail}>{currentUser.email}</Text>
           )}
-        </View>
+        </View> */}
 
-        {/* Current Plan & Usage - Matching Web App */}
+        {/* Current Plan & Usage Card */}
         <View style={styles.planCard}>
-          <Text style={styles.planCardTitle}>Current Plan & Usage</Text>
+          <View style={styles.planCardHeader}>
+            <View style={styles.planCardIconContainer}>
+              <Ionicons name="card-outline" size={24} color="#1F2937" />
+            </View>
+            <Text style={styles.planCardTitle}>Current Plan & Usage</Text>
+          </View>
+          
+          <View style={styles.planDivider} />
+          
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Plan</Text>
+            <View style={styles.planRowLeft}>
+              <Ionicons name="star-outline" size={18} color="#6B7280" style={styles.planRowIcon} />
+              <Text style={styles.planLabel}>Plan</Text>
+            </View>
             <View style={[styles.planBadge, isPremium ? styles.premiumBadge : styles.freeBadge]}>
               <Text style={[styles.planBadgeText, isPremium ? styles.premiumBadgeText : styles.freeBadgeText]}>
                 {isPremium ? 'BookYolo Premium' : 'BookYolo Free'}
               </Text>
             </View>
           </View>
+          
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Remaining Scans</Text>
+            <View style={styles.planRowLeft}>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#6B7280" style={styles.planRowIcon} />
+              <Text style={styles.planLabel}>Remaining Scans</Text>
+            </View>
             <Text style={[styles.planValue, (currentUser?.remaining || 0) > 0 ? styles.remainingGreen : styles.remainingRed]}>
               {currentUser?.remaining || 0}
             </Text>
           </View>
+          
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Total Scans Used</Text>
+            <View style={styles.planRowLeft}>
+              <Ionicons name="analytics-outline" size={18} color="#6B7280" style={styles.planRowIcon} />
+              <Text style={styles.planLabel}>Total Scans Used</Text>
+            </View>
             <Text style={styles.planValue}>{currentUser?.used || 0}</Text>
           </View>
+          
           {isPremium && currentUser?.subscription_expires && (
             <View style={styles.planRow}>
-              <Text style={styles.planLabel}>Expires on</Text>
+              <View style={styles.planRowLeft}>
+                <Ionicons name="calendar-outline" size={18} color="#6B7280" style={styles.planRowIcon} />
+                <Text style={styles.planLabel}>Expires on</Text>
+              </View>
               <Text style={styles.planValue}>
                 {new Date(currentUser.subscription_expires).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -463,11 +486,12 @@ export default function PlanStatusScreen({ navigation }) {
           )}
 
           {/* Upgrade/Downgrade Button */}
-          {!isPremium && (
+          {/* {!isPremium && (
             <TouchableOpacity
               style={[styles.actionButton, styles.upgradeButton, upgradeLoading && styles.disabledButton]}
               onPress={handleUpgrade}
               disabled={upgradeLoading}
+              activeOpacity={0.8}
             >
               {upgradeLoading ? (
                 <View style={styles.upgradeButtonContent}>
@@ -476,19 +500,23 @@ export default function PlanStatusScreen({ navigation }) {
                 </View>
               ) : (
                 <View style={styles.upgradeButtonContent}>
-                  <Text style={styles.upgradeButtonText}>Upgrade to BookYolo Premium</Text>
-                  <Text style={styles.upgradeButtonSubtext}>300 extra scans per year for $20/year</Text>
+                  <Ionicons name="star" size={20} color="#ffffff" style={styles.upgradeIcon} />
+                  <View style={styles.upgradeTextContainer}>
+                    <Text style={styles.upgradeButtonText}>Upgrade to BookYolo Premium</Text>
+                    <Text style={styles.upgradeButtonSubtext}>300 extra scans per year for $20/year</Text>
+                  </View>
                 </View>
               )}
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Cancel Subscription Button - Only show for paid premium users */}
-          {isPremium && currentUser?.subscription_id && (
+          {/* {isPremium && currentUser?.subscription_id && (
             <TouchableOpacity
               style={[styles.actionButton, styles.cancelButton, (cancelLoading || currentUser?.subscription_status === 'cancel_at_period_end') && styles.disabledButton]}
               onPress={handleCancelSubscription}
               disabled={cancelLoading || currentUser?.subscription_status === 'cancel_at_period_end'}
+              activeOpacity={0.8}
             >
               {cancelLoading ? (
                 <>
@@ -507,66 +535,79 @@ export default function PlanStatusScreen({ navigation }) {
                 </>
               )}
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Referral Link - Only show for non-premium users */}
-          {!isPremium && (
+          {/* {!isPremium && (
             <TouchableOpacity
               style={[styles.actionButton, styles.referralButton]}
               onPress={handleReferralModalOpen}
+              activeOpacity={0.8}
             >
               <Ionicons name="share-social" size={20} color="#ffffff" />
               <Text style={styles.referralButtonText}>Share with 3 Friends and Get BookYolo Premium for Free</Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Edit Profile */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.actionButton, styles.editButton]}
             onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.7}
           >
-            <Ionicons name="create-outline" size={20} color="#374151" />
+            <View style={styles.editIconContainer}>
+              <Ionicons name="create-outline" size={20} color="#374151" />
+            </View>
             <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Contact Support */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.actionButton, styles.contactButton]}
             onPress={() => navigation.navigate('ContactSocial')}
+            activeOpacity={0.7}
           >
-            <Ionicons name="headset-outline" size={20} color="#374151" />
+            <View style={styles.contactIconWrapper}>
+              <Ionicons name="headset-outline" size={20} color="#374151" />
+            </View>
             <Text style={styles.contactButtonText}>Contact Support</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Delete Account */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => {
               setDeleteConfirmText('');
               setDeleteAccountError('');
               setShowDeleteAccount(true);
             }}
+            activeOpacity={0.7}
           >
-            <Ionicons name="trash-outline" size={20} color="#374151" />
+            <View style={styles.deleteIconContainer}>
+              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            </View>
             <Text style={styles.deleteButtonText}>Delete Account</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
-        {/* Legal Links - Matching Web App */}
+        {/* Legal Links */}
         <View style={styles.legalSection}>
           <View style={styles.legalLinks}>
             <TouchableOpacity
               onPress={() => Linking.openURL('https://bookyolo.com/terms-of-services')}
+              style={styles.legalLinkTouchable}
             >
               <Text style={styles.legalLink}>Terms of Service</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => Linking.openURL('https://bookyolo.com/privacy-policy')}
+              style={styles.legalLinkTouchable}
             >
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => Linking.openURL('https://bookyolo.com/cookie-policy')}
+              style={styles.legalLinkTouchable}
             >
               <Text style={styles.legalLink}>Cookie Policy</Text>
             </TouchableOpacity>
@@ -798,32 +839,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 70,
   },
   logo: {
     width: 45,
     height: 45,
-  },
-  versionContainer: {
-    position: 'absolute',
-    right: 20,
-    top: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
@@ -831,68 +857,122 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    marginTop: 30,
   },
   accountHeader: {
     alignItems: 'center',
     marginBottom: 32,
+    paddingTop: 10,
   },
   avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    marginBottom: 16,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#1F2937',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#E5E7EB',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '700',
     color: '#ffffff',
+    letterSpacing: -0.5,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#1F2937',
     marginTop: 8,
+    letterSpacing: -0.3,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 6,
+    fontWeight: '400',
   },
   planCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#F3F4F6',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  planCardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   planCardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  planDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginBottom: 20,
   },
   planRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingVertical: 4,
+  },
+  planRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  planRowIcon: {
+    marginRight: 10,
   },
   planLabel: {
     fontSize: 16,
     color: '#6B7280',
+    fontWeight: '500',
   },
   planValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1F2937',
   },
   planBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   premiumBadge: {
@@ -902,8 +982,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   planBadgeText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   premiumBadgeText: {
     color: '#065F46',
@@ -943,87 +1024,144 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    justifyContent: 'flex-start',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     marginBottom: 12,
-    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   upgradeButton: {
     backgroundColor: '#059669',
-    flexDirection: 'column',
-    gap: 4,
+    justifyContent: 'center',
   },
   upgradeButtonContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    width: '100%',
+  },
+  upgradeIcon: {
+    marginRight: 10,
+  },
+  upgradeTextContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   upgradeButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   upgradeButtonSubtext: {
     color: '#ffffff',
     fontSize: 14,
-    opacity: 0.9,
+    opacity: 0.95,
     textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '400',
   },
   cancelButton: {
     backgroundColor: '#DC2626',
+    justifyContent: 'center',
   },
   cancelButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   referralButton: {
     backgroundColor: '#1F2937',
+    justifyContent: 'flex-start',
   },
   referralButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    letterSpacing: -0.2,
+    marginLeft: 12,
   },
   editButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
+  },
+  editIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   editButtonText: {
     color: '#374151',
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    letterSpacing: -0.2,
   },
   contactButton: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
+  },
+  contactIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 0,
   },
   contactButtonText: {
     color: '#374151',
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    letterSpacing: -0.2,
+    marginLeft: 12,
   },
   deleteButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#FEE2E2',
+  },
+  deleteIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   deleteButtonText: {
-    color: '#374151',
+    color: '#EF4444',
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    letterSpacing: -0.2,
   },
   disabledButton: {
     opacity: 0.5,
   },
   legalSection: {
     marginTop: 32,
-    paddingTop: 24,
+    paddingTop: 28,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
@@ -1031,19 +1169,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 24,
     marginBottom: 24,
+  },
+  legalLinkTouchable: {
+    marginHorizontal: 12,
+    marginVertical: 4,
   },
   legalLink: {
     fontSize: 14,
     color: '#6B7280',
     textDecorationLine: 'underline',
+    fontWeight: '500',
   },
   disclaimer: {
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 18,
+    paddingHorizontal: 8,
   },
   // Modal Styles
   modalOverlay: {

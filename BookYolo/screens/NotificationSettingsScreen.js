@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationProvider';
 import notificationService from '../lib/notificationService';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline Back Button Component - same as upgrade screen
 function BackButton({ onPress, style }) {
@@ -184,15 +185,12 @@ const NotificationSettingsScreen = ({ navigation }) => {
         
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
       </View>
       
       <View style={styles.header}>
@@ -332,32 +330,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 65,
   },
   logo: {
     width: 45,
     height: 45,
-  },
-  versionContainer: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
   },
   header: {
     padding: 20,

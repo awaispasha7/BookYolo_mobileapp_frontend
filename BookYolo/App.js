@@ -7,6 +7,7 @@ import { NotificationProvider, useNotifications } from './context/NotificationPr
 import { AuthProvider } from './context/AuthProvider';
 import deepLinkHandler from './lib/deepLinkHandler';
 import notificationService from './lib/notificationService';
+import { preloadImages } from './lib/imagePreloader';
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignUpScreen from "./screens/SignUpScreen";
@@ -83,6 +84,9 @@ function AppContent() {
 
   useEffect(() => {
     try {
+      // Preload images at app startup to prevent loading delays
+      preloadImages();
+      
       // Initialize deep link handler
       deepLinkHandler.init();
       

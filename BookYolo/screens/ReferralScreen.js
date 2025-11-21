@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthProvider';
 import apiClient from '../lib/apiClient';
+import { BOOK1_LOGO } from '../constants/images';
 
 const { width } = Dimensions.get('window');
 
@@ -44,22 +45,46 @@ const ReferralScreen = ({ navigation }) => {
   const [referralStats, setReferralStats] = useState(null);
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralLink, setReferralLink] = useState('');
+  
+  // Refs to prevent infinite loops
+  const isLoadingRef = React.useRef(false);
+  const hasLoadedRef = React.useRef(false);
+  const lastUserIdRef = React.useRef(null);
+  const hasRefreshedForStatsRef = React.useRef(false);
 
   const loadReferralStats = React.useCallback(async () => {
     if (!user?.id && !user?.user?.id) return;
     
+    const userId = user?.id || user?.user?.id;
+    
+    // Prevent duplicate loads for the same user
+    if (isLoadingRef.current) return;
+    if (hasLoadedRef.current && lastUserIdRef.current === userId) return;
+    
+    isLoadingRef.current = true;
     setReferralLoading(true);
     try {
-      const userId = user?.id || user?.user?.id;
       const { data: stats, error: statsError } = await apiClient.getReferralStats(userId);
       
       if (!statsError && stats) {
         setReferralStats(stats);
+        hasLoadedRef.current = true;
+        lastUserIdRef.current = userId;
         
-        // If premium was just granted, refresh user data
-        if (stats.has_premium && stats.plan === 'premium') {
+        // Only refresh user if premium was just granted and user doesn't already have premium
+        // Use a ref to prevent multiple refresh calls
+        const userPlan = user?.plan || user?.user?.plan || 'free';
+        if (stats.has_premium && stats.plan === 'premium' && userPlan !== 'premium' && !hasRefreshedForStatsRef.current) {
+          hasRefreshedForStatsRef.current = true;
           if (refreshUser) {
-            await refreshUser();
+            // Use setTimeout to prevent immediate re-render
+            setTimeout(async () => {
+              await refreshUser();
+              // Reset after a delay to allow future refreshes if needed
+              setTimeout(() => {
+                hasRefreshedForStatsRef.current = false;
+              }, 2000);
+            }, 100);
           }
         }
       }
@@ -67,8 +92,9 @@ const ReferralScreen = ({ navigation }) => {
       // Silent error handling
     } finally {
       setReferralLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [user, refreshUser]);
+  }, [user?.id, user?.user?.id, refreshUser]);
 
   const loadReferralLink = React.useCallback(() => {
     const userId = user?.id || user?.user?.id;
@@ -77,7 +103,7 @@ const ReferralScreen = ({ navigation }) => {
       const link = `${baseUrl}/signup?ref=${userId}`;
       setReferralLink(link);
     }
-  }, [user]);
+  }, [user?.id, user?.user?.id]);
 
   const sendReferralNotifications = React.useCallback(async () => {
     try {
@@ -90,7 +116,44 @@ const ReferralScreen = ({ navigation }) => {
         }
       }
 
-      // 1. Send one-time notification when user first visits referral screen in this session
+      const userId = user?.id || user?.user?.id;
+      if (!userId || !referralStats) return;
+
+      const userName = user?.email?.split('@')[0] || 'User';
+      const currentCount = referralStats.referral_count || 0;
+
+      // 1. Check if referral count has increased (someone signed up using referral)
+      const lastReferralCountKey = `last_referral_count_${userId}`;
+      const lastReferralCount = await AsyncStorage.getItem(lastReferralCountKey);
+      const lastCount = lastReferralCount ? parseInt(lastReferralCount, 10) : 0;
+
+      if (currentCount > lastCount && lastCount >= 0) {
+        // Referral count increased - someone signed up!
+        const referralIncreaseId = `referral_increase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        await Notifications.scheduleNotificationAsync({
+          identifier: referralIncreaseId,
+          content: {
+            title: 'New Referral! 🎉',
+            body: `Hi ${userName}, someone just signed up using your referral link! You now have ${currentCount} ${currentCount === 1 ? 'referral' : 'referrals'}.`,
+            data: {
+              type: 'referral_signup',
+              uniqueId: referralIncreaseId,
+              timestamp: Date.now()
+            },
+            sound: true,
+          },
+          trigger: null,
+        });
+
+        // Update last known count
+        await AsyncStorage.setItem(lastReferralCountKey, String(currentCount));
+      } else if (lastCount === 0 && currentCount > 0) {
+        // First time tracking - just store the count, don't send notification
+        await AsyncStorage.setItem(lastReferralCountKey, String(currentCount));
+      }
+
+      // 2. Send one-time notification when user first visits referral screen in this session
       const sessionId = await AsyncStorage.getItem('current_login_session_id');
       if (sessionId) {
         const sessionVisitKey = `referral_screen_notification_${sessionId}`;
@@ -118,39 +181,34 @@ const ReferralScreen = ({ navigation }) => {
         }
       }
 
-      // 2. Check if user has reached referral milestones (every 3 referrals)
+      // 3. Check if user has reached referral milestones (every 3 referrals)
       if (referralStats && referralStats.referral_count >= 3) {
-        const userId = user?.id || user?.user?.id;
-        if (userId) {
-          const milestoneKey = `referral_milestone_notification_${userId}`;
-          const lastMilestoneCount = await AsyncStorage.getItem(milestoneKey);
-          const currentCount = referralStats.referral_count || 0;
+        const milestoneKey = `referral_milestone_notification_${userId}`;
+        const lastMilestoneCount = await AsyncStorage.getItem(milestoneKey);
+        
+        // Calculate which milestone (3, 6, 9, etc.)
+        const milestone = Math.floor(currentCount / 3) * 3;
+        
+        // Only show if we haven't shown for this milestone yet
+        if (lastMilestoneCount !== String(milestone) && milestone >= 3) {
+          const milestoneId = `referral_milestone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           
-          // Calculate which milestone (3, 6, 9, etc.)
-          const milestone = Math.floor(currentCount / 3) * 3;
-          
-          // Only show if we haven't shown for this milestone yet
-          if (lastMilestoneCount !== String(milestone) && milestone >= 3) {
-            const milestoneId = `referral_milestone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const userName = user?.email?.split('@')[0] || 'User';
-            
-            await Notifications.scheduleNotificationAsync({
-              identifier: milestoneId,
-              content: {
-                title: 'Referral Reward Earned! 🎉',
-                body: `Hi ${userName}, you've earned ${currentCount} referrals! You qualify for Premium!`,
-                data: {
-                  type: 'referral_reward',
-                  uniqueId: milestoneId,
-                  timestamp: Date.now()
-                },
-                sound: true,
+          await Notifications.scheduleNotificationAsync({
+            identifier: milestoneId,
+            content: {
+              title: 'Referral Reward Earned! 🎉',
+              body: `Hi ${userName}, you've earned ${currentCount} referrals! You qualify for Premium!`,
+              data: {
+                type: 'referral_reward',
+                uniqueId: milestoneId,
+                timestamp: Date.now()
               },
-              trigger: null,
-            });
-            
-            await AsyncStorage.setItem(milestoneKey, String(milestone));
-          }
+              sound: true,
+            },
+            trigger: null,
+          });
+          
+          await AsyncStorage.setItem(milestoneKey, String(milestone));
         }
       }
     } catch (error) {
@@ -161,19 +219,44 @@ const ReferralScreen = ({ navigation }) => {
   // Load referral stats when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      if (user?.id || user?.user?.id) {
-        loadReferralStats();
+      const userId = user?.id || user?.user?.id;
+      if (userId) {
+        // Reset refs when user changes
+        if (lastUserIdRef.current !== userId) {
+          hasLoadedRef.current = false;
+          lastUserIdRef.current = null;
+          isLoadingRef.current = false;
+          hasRefreshedForStatsRef.current = false;
+        }
+        
+        // Only load if not already loaded for this user
+        if (!hasLoadedRef.current || lastUserIdRef.current !== userId) {
+          loadReferralStats();
+        }
         loadReferralLink();
       }
-    }, [user, loadReferralStats, loadReferralLink])
+      
+      return () => {
+        // Cleanup on blur - don't reset hasLoadedRef to allow showing cached data
+      };
+    }, [user?.id, user?.user?.id, loadReferralStats, loadReferralLink])
   );
 
-  // Send notifications after referral stats are loaded
+  // Send notifications after referral stats are loaded (only once per stats change)
+  const notificationSentRef = React.useRef(false);
   useEffect(() => {
-    if (referralStats !== null) {
+    if (referralStats !== null && !notificationSentRef.current) {
       sendReferralNotifications();
+      notificationSentRef.current = true;
+      
+      // Reset after a delay to allow for future updates
+      const timer = setTimeout(() => {
+        notificationSentRef.current = false;
+      }, 5000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [referralStats, sendReferralNotifications]);
+  }, [referralStats?.referral_count, sendReferralNotifications]);
 
   const copyReferralLink = async () => {
     const linkToCopy = referralLink || (user ? `https://bookyolo-frontend.vercel.app/signup?ref=${user?.id || user?.user?.id || ''}` : '');
@@ -254,15 +337,12 @@ const ReferralScreen = ({ navigation }) => {
         
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../assets/book1.jpg')} 
+            source={BOOK1_LOGO} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-        </View>
       </View>
 
       <ScrollView 
@@ -430,6 +510,8 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 50,
     backgroundColor: "#ffffff",
+    
+    
   },
   header: {
     flexDirection: 'row',
@@ -440,6 +522,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 60,
     position: 'relative',
+    
+    
   },
   backButtonContainer: {
     position: 'absolute',
@@ -449,45 +533,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 65,
   },
   logo: {
     width: 45,
     height: 45,
   },
-  versionContainer: {
-    position: 'absolute',
-    right: 20,
-    top: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
-  },
   scrollView: {
     flex: 1,
     backgroundColor: "#ffffff",
+    marginTop: 30,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    // padding: 20,
     paddingTop: 0,
     paddingBottom: 40,
     backgroundColor: "#ffffff",
+    // marginTop: 10,
   },
   card: {
     backgroundColor: "#ffffff",
@@ -496,13 +567,13 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
-    shadowColor: "rgba(0, 0, 0, 0.1)",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    // shadowColor: "rgba(0, 0, 0, 0.1)",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 1,
+    // shadowRadius: 8,
     elevation: 4,
     borderWidth: 0,
     borderColor: 'transparent',

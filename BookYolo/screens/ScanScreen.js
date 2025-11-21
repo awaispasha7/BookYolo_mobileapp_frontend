@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { BOOK1_LOGO } from "../constants/images";
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from "../lib/apiClient";
@@ -217,6 +218,64 @@ export default function ScanScreen({ navigation, route }) {
       // Load user data
       loadUserData();
       
+      // Check for referral signup notifications (same pattern as UpgradeScreen.js)
+      const checkReferralSignup = async () => {
+        try {
+          if (!user?.id && !user?.user?.id) return;
+          
+          // Check notification permissions
+          const { status } = await Notifications.getPermissionsAsync();
+          if (status !== 'granted') {
+            const { status: newStatus } = await Notifications.requestPermissionsAsync();
+            if (newStatus !== 'granted') {
+              return;
+            }
+          }
+
+          const userId = user?.id || user?.user?.id;
+          const { data: stats } = await apiClient.getReferralStats(userId);
+          
+          if (stats) {
+            const currentCount = stats.referral_count || 0;
+            const lastReferralCountKey = `last_referral_count_${userId}`;
+            const lastReferralCount = await AsyncStorage.getItem(lastReferralCountKey);
+            const lastCount = lastReferralCount ? parseInt(lastReferralCount, 10) : 0;
+
+            if (currentCount > lastCount && lastCount >= 0) {
+              // Referral count increased - someone signed up!
+              const userName = user?.email?.split('@')[0] || 'User';
+              const referralIncreaseId = `referral_increase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              
+              await Notifications.scheduleNotificationAsync({
+                identifier: referralIncreaseId,
+                content: {
+                  title: 'New Referral! 🎉',
+                  body: `Hi ${userName}, someone just signed up using your referral link! You now have ${currentCount} ${currentCount === 1 ? 'referral' : 'referrals'}.`,
+                  data: {
+                    type: 'referral_signup',
+                    uniqueId: referralIncreaseId,
+                    timestamp: Date.now()
+                  },
+                  sound: true,
+                },
+                trigger: null,
+              });
+
+              // Update last known count
+              await AsyncStorage.setItem(lastReferralCountKey, String(currentCount));
+            } else if (lastCount === 0 && currentCount > 0) {
+              // First time tracking - just store the count, don't send notification
+              await AsyncStorage.setItem(lastReferralCountKey, String(currentCount));
+            }
+          }
+        } catch (error) {
+          // Silent error handling
+        }
+      };
+      
+      // Check for referral signups
+      checkReferralSignup();
+      
       // Set up notification handler
       try {
         Notifications.setNotificationHandler({
@@ -235,7 +294,7 @@ export default function ScanScreen({ navigation, route }) {
         hasRefreshedThisFocus.current = false;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loadUserData]) // refreshUser is a stable function from context
+    }, [loadUserData, user]) // refreshUser is a stable function from context
   );
 
   // Note: Progress bar removed - loading state is now shown in the button itself (matching web app)
@@ -260,6 +319,8 @@ export default function ScanScreen({ navigation, route }) {
           if (hasReceivedWarning) {
             return;
           }
+          
+          // Check notification permissions
           const { status } = await Notifications.getPermissionsAsync();
           if (status !== 'granted') {
             const { status: newStatus } = await Notifications.requestPermissionsAsync();
@@ -267,13 +328,15 @@ export default function ScanScreen({ navigation, route }) {
               return;
             }
           }
+          
+          // Send push notification (same pattern as UpgradeScreen.js)
           const userName = user?.email?.split('@')[0] || 'User';
           const warningId = `scan_limit_warning_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           await Notifications.scheduleNotificationAsync({
             identifier: warningId,
             content: {
               title: 'Scan Limit Warning ⚠️',
-              body: `Hi ${userName}, you have only 5 scans left! Upgrade to Premium for 300+ extra scans.`,
+              body: `Hi ${userName}, you have only 5 scans left! Please upgrade to premium to get more scans.`,
               data: {
                 type: 'scan_limit_warning',
                 uniqueId: warningId,
@@ -623,13 +686,20 @@ export default function ScanScreen({ navigation, route }) {
   const renderMessage = (message, index) => {
     const isUser = message.role === "user";
     const isError = message.isError;
+    const isPostScanMessage = !isUser && !isError && message.content && 
+      message.content.includes("Do you have any questions about this scan");
     
     return (
-      <View key={index} style={[styles.messageContainer, isUser ? styles.userMessageContainer : styles.assistantMessageContainer]}>
+      <View key={index} style={[
+        styles.messageContainer, 
+        isUser ? styles.userMessageContainer : styles.assistantMessageContainer,
+        isPostScanMessage && styles.postScanMessageContainer
+      ]}>
         <View style={[
           styles.messageBubble,
           isUser ? styles.userMessageBubble : styles.assistantMessageBubble,
-          isError && styles.errorMessageBubble
+          isError && styles.errorMessageBubble,
+          isPostScanMessage && styles.postScanMessageBubble
         ]}>
           {!isUser && !isError && message.scanData ? (
             // Detailed scan result display (matching web app)
@@ -726,6 +796,14 @@ export default function ScanScreen({ navigation, route }) {
       
       {/* Header */}
       <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={BOOK1_LOGO} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        
         <TouchableOpacity 
           style={styles.profileButtonContainer}
           onPress={() => navigation.navigate('Account')}
@@ -737,7 +815,6 @@ export default function ScanScreen({ navigation, route }) {
           <Text style={styles.profileLabel}>Profile</Text>
         </TouchableOpacity>
         
-        <Text style={styles.versionText}>Version 17.7.9.9b</Text>
       </View>
 
       <KeyboardAvoidingView 
@@ -827,7 +904,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 8,
@@ -836,10 +913,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     zIndex: 1000,
+    position: 'relative',
+    height: 80,
+  },
+  logoContainer: {
+    position: 'absolute',
+    left: 20,
+    top: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 7,
+  },
+  logo: {
+    width: 45,
+    height: 45,
   },
   profileButtonContainer: {
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
+    marginTop: 4,
   },
   profileIcon: {
     width: 44,
@@ -862,11 +955,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 4,
     textAlign: "center",
-  },
-  versionText: {
-    fontSize: 12,
-    color: "#070707",
-    fontWeight: "500",
   },
   newScanButton: {
     paddingHorizontal: 16,
@@ -922,8 +1010,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageContainer: {
-    marginBottom: 16,
+    marginBottom: 0,
     width: '100%',
+  },
+  postScanMessageContainer: {
+    marginTop: 0,
+    marginBottom: 0,
   },
   userMessageContainer: {
     alignItems: 'flex-end',
@@ -935,6 +1027,10 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     borderRadius: 16,
     padding: 16,
+  },
+  postScanMessageBubble: {
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   userMessageBubble: {
     backgroundColor: "#f3f4f6",
@@ -1099,7 +1195,6 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
   },
   textInput: {
     flex: 1,
@@ -1109,7 +1204,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#e9e8ea",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
     fontSize: 16,
     color: "#070707",
     textAlignVertical: 'top',
@@ -1122,6 +1218,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 12,
+    marginLeft: 8,
+    marginBottom: 0,
   },
   sendButtonDisabled: {
     backgroundColor: "#9ca3af",

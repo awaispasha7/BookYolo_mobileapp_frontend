@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -50,15 +51,15 @@ const PrivacyTermsScreen = ({ navigation }) => {
           
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../assets/book1.jpg')} 
+              source={BOOK1_LOGO} 
               style={styles.logo}
               resizeMode="contain"
             />
           </View>
           
-          <View style={styles.versionContainer}>
+          {/* <View style={styles.versionContainer}>
             <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-          </View>
+          </View> */}
         </View>
         
       </View>
@@ -188,11 +189,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
+    marginTop: 22,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 10,
+    marginTop: 65,
   },
   logo: {
     width: 45,
@@ -208,6 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingVertical: 6,
     paddingHorizontal: 8,
+    
   },
   versionText: {
     fontSize: 8,
