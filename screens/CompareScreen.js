@@ -76,8 +76,8 @@ const CompareScreen = ({ navigation, route }) => {
       // Check if we have a current chat ID
       const currentChatId = await AsyncStorage.getItem('current_compare_chat_id');
       if (currentChatId) {
-        // First check if it's a backend chat (starts with UUID, not 'compare-')
-        if (!currentChatId.startsWith('compare-')) {
+        // First check if it's a backend chat (starts with UUID, not 'compare-' or 'local_')
+        if (!currentChatId.startsWith('compare-') && !currentChatId.startsWith('local_')) {
           // Load from backend (same as web frontend)
           const { data: chatData, error } = await apiClient.getChat(currentChatId);
           if (!error && chatData && chatData.chat) {
@@ -179,30 +179,8 @@ const CompareScreen = ({ navigation, route }) => {
     }
   };
 
-  // Handle loading compare from HistoryScreen navigation
-  useEffect(() => {
-    if (route?.params?.loadCompare) {
-      const compareToLoad = route.params.loadCompare;
-      
-      // Find the compare in recentCompares or create a compare object
-      const compare = recentCompares.find(c => 
-        (c.id === compareToLoad.id || c.chatId === compareToLoad.id)
-      ) || {
-        id: compareToLoad.id,
-        chatId: compareToLoad.id,
-        title: compareToLoad.title || 'Comparison',
-        source: compareToLoad.source || 'backend',
-        date: new Date().toLocaleDateString(),
-        createdAt: new Date().toISOString()
-      };
-      
-      // Load the compare using handleRecentComparePress
-      handleRecentComparePress(compare);
-      
-      // Clear the param after loading
-      navigation.setParams({ loadCompare: undefined });
-    }
-  }, [route?.params?.loadCompare, recentCompares, handleRecentComparePress, navigation]);
+  // Note: Loading compare from HistoryScreen is handled by the useEffect below (around line 1190)
+  // That useEffect always fetches fresh messages from backend, which is better than this old approach
 
   // Reload recent compares when screen comes into focus
   useFocusEffect(
@@ -269,72 +247,124 @@ const CompareScreen = ({ navigation, route }) => {
         loadScans();
       }
       
-      // If there's an active chat, refresh messages to get latest chat history
-      // This ensures that when user navigates back, they see the latest messages
-      if (chatId && currentCompareChat && !chatId.startsWith('compare-')) {
-        // Only refresh if we have a backend chat (not local)
-        const refreshChatMessages = async () => {
+      // ALWAYS refresh messages if we have a backend chatId (same as scan chats)
+      // This ensures that when user navigates back, they see the latest messages including new AI chat history
+      // This is critical for showing chat history after user chats with AI and comes back
+      const refreshMessagesIfNeeded = async () => {
+        // Check if we have a backend chatId (not local compare-* or local_* ID)
+        let backendChatId = chatId && !chatId.startsWith('compare-') && !chatId.startsWith('local_') ? chatId : null;
+        
+        // Also check currentCompareChat for backend chatId
+        let compareChatId = currentCompareChat && currentCompareChat.id && !currentCompareChat.id.startsWith('compare-') && !currentCompareChat.id.startsWith('local_') 
+          ? currentCompareChat.id 
+          : null;
+        
+        // If no chatId in state, check AsyncStorage (for when user reopens compare)
+        if (!backendChatId && !compareChatId) {
           try {
-            const { data: chatData, error: chatError } = await apiClient.getChat(chatId);
+            const savedChatId = await AsyncStorage.getItem('current_compare_chat_id');
+            if (savedChatId && !savedChatId.startsWith('compare-') && !savedChatId.startsWith('local_')) {
+              backendChatId = savedChatId;
+            }
+          } catch (e) {
+            // Silent error
+          }
+        }
+        
+        const activeChatId = backendChatId || compareChatId;
+        
+        if (activeChatId) {
+          // Refresh messages from backend to get latest chat history (same as scan chats)
+          try {
+            const { data: chatData, error: chatError } = await apiClient.getChat(activeChatId);
             if (!chatError && chatData && chatData.messages) {
-              // Process and update messages with latest from backend
-              const processedMessages = chatData.messages
-                .filter((msg) => {
-                  if (msg.role === 'user' && msg.content && msg.content.trim() !== '') {
-                    return true;
-                  }
-                  if (msg.role === 'assistant' && msg.content && msg.content.trim() !== '') {
-                    return true;
-                  }
-                  if (msg.role === 'assistant' && msg.content && 
-                      (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
-                    return true;
-                  }
-                  return false;
-                })
-                .map((msg) => {
-                  const message = {
-                    role: msg.role,
-                    content: msg.content || '',
-                    timestamp: msg.created_at
-                  };
+              // Check if this is a compare chat
+              const isCompareChat = chatData.chat && chatData.chat.type === 'compare';
+              
+              // Get scan data if available (for compare chats)
+              let compareScanData = null;
+              if (isCompareChat && chatData.chat.scan_ids && chatData.chat.scan_ids.length >= 2) {
+                try {
+                  const [scan1Result, scan2Result] = await Promise.all([
+                    apiClient.getScanById(chatData.chat.scan_ids[0]),
+                    apiClient.getScanById(chatData.chat.scan_ids[1])
+                  ]);
                   
-                  if (msg.role === 'user') {
-                    message.messageType = "compare";
-                  }
-                  
-                  if (msg.role === 'assistant' && msg.content && 
-                      (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
-                    message.isComparison = true;
+                  if (scan1Result.data && scan2Result.data) {
+                    compareScanData = {
+                      scan1: scan1Result.data,
+                      scan2: scan2Result.data
+                    };
                     
-                    // Try to get scan data from currentCompareChat
-                    if (currentCompareChat.scan1 && currentCompareChat.scan2) {
-                      message.comparedScans = {
-                        scan1: currentCompareChat.scan1,
-                        scan2: currentCompareChat.scan2
-                      };
-                      const analysisStart = msg.content.indexOf('Comparative Analysis:');
-                      if (analysisStart !== -1) {
-                        message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
-                      }
+                    // Update currentCompareChat with scan data if not already set
+                    if (!currentCompareChat || !currentCompareChat.scan1 || !currentCompareChat.scan2) {
+                      setCurrentCompareChat(prev => ({
+                        ...prev,
+                        id: activeChatId,
+                        type: 'compare',
+                        scan1: scan1Result.data,
+                        scan2: scan2Result.data,
+                        messages: chatData.messages
+                      }));
                     }
                   }
-                  
-                  return message;
-                });
+                } catch (e) {
+                  // Silent error - continue without scan data
+                }
+              }
               
-              // Only update if we have messages (avoid clearing messages if fetch fails)
-              if (processedMessages.length > 0) {
-                setMessages(processedMessages);
+              // Process and update messages with latest from backend (same as web app - show ALL messages)
+              const processedMessages = chatData.messages.map((msg, index) => {
+                const message = {
+                  role: msg.role,
+                  content: msg.content || '',
+                  timestamp: msg.created_at || msg.timestamp
+                };
+                
+                // Set messageType for user messages (same as web app)
+                if (msg.role === 'user') {
+                  message.messageType = isCompareChat ? "compare" : undefined;
+                }
+                
+                // Mark comparison messages and extract scan data
+                if (msg.role === 'assistant' && msg.content && 
+                    (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
+                  message.isComparison = true;
+                  
+                  // Use scan data from API response or currentCompareChat
+                  const scanData = compareScanData || (currentCompareChat && currentCompareChat.scan1 && currentCompareChat.scan2 ? {
+                    scan1: currentCompareChat.scan1,
+                    scan2: currentCompareChat.scan2
+                  } : null);
+                  
+                  if (scanData) {
+                    message.comparedScans = scanData;
+                    const analysisStart = msg.content.indexOf('Comparative Analysis:');
+                    if (analysisStart !== -1) {
+                      message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
+                    }
+                  }
+                }
+                
+                return message;
+              });
+              
+              // Update messages with latest from backend (same as web app)
+              // Always update to show latest chat history (critical for showing new messages after user chats with AI)
+              setMessages(processedMessages);
+              
+              // Also update chatId if it wasn't set yet
+              if (!chatId || chatId !== activeChatId) {
+                setChatId(activeChatId);
               }
             }
           } catch (e) {
             // Silent error - keep existing messages
           }
-        };
-        
-        refreshChatMessages();
-      }
+        }
+      };
+      
+      refreshMessagesIfNeeded();
     }, [chatId, currentCompareChat])
   );
 
@@ -622,129 +652,178 @@ const CompareScreen = ({ navigation, route }) => {
     try {
       // console.log('🔍 RECENT COMPARE: Clicked on:', compare);
       
-      // For backend comparisons, we need to fetch the full chat data (same as web frontend)
-      if (compare.source === 'backend' && compare.chatId) {
+      // ALWAYS fetch fresh chat data from backend (same as web app - always calls /chat/${chatId})
+      // Web app: const chatRes = await fetch(`${API_BASE}/chat/${chatId}`) - always fetches fresh
+      // This ensures we get the latest messages including new AI conversations
+      const chatIdToLoad = compare.chatId || compare.id;
+      
+      // Always try to fetch from backend if we have a chatId (not local compare-* or local_* ID)
+      // This matches web app behavior - always fetches fresh messages
+      if (chatIdToLoad && !chatIdToLoad.startsWith('compare-') && !chatIdToLoad.startsWith('local_')) {
+        // This is a backend chatId - always fetch fresh messages (same as web app)
         // console.log('🌐 Fetching full chat data for backend comparison...');
-        const { data: chatData, error } = await apiClient.getChat(compare.chatId);
-        
-        if (error) {
-          // console.log('❌ Error fetching chat data:', error);
-          Alert.alert('Error', 'Could not load comparison details');
-          return;
-        }
-        
-        if (chatData && chatData.chat) {
-          // console.log('✅ Chat data fetched:', chatData);
+        try {
+          const { data: chatData, error } = await apiClient.getChat(chatIdToLoad);
           
-          // If it's a compare chat, fetch the scan data for both scans (same as web frontend)
-          let compareScanData = null;
-          if (chatData.chat.type === 'compare' && chatData.chat.scan_ids && chatData.chat.scan_ids.length >= 2) {
-            try {
-              // Fetch scan data for both scans using /scan/{scanId} endpoint (same as web frontend)
-              const [scan1Result, scan2Result] = await Promise.all([
-                apiClient.getScanById(chatData.chat.scan_ids[0]),
-                apiClient.getScanById(chatData.chat.scan_ids[1])
-              ]);
+          if (error) {
+            // console.log('❌ Error fetching chat data:', error);
+            // Try to fall back to local data if available
+            if (compare.firstListing && compare.secondListing && compare.answer) {
+              // Fall back to local comparison data
+              // console.log('⚠️ Backend fetch failed, using local data');
+              // Set current compare chat for AI questions
+              setCurrentCompareChat(compare);
+              setChatId(compare.id);
+              await AsyncStorage.setItem('current_compare_chat_id', compare.id);
               
-              if (scan1Result.data && scan2Result.data) {
-                compareScanData = {
-                  scan1: scan1Result.data,
-                  scan2: scan2Result.data
-                };
+              // Format local comparison messages
+              const localMessages = [];
+              if (compare.firstListing && compare.secondListing) {
+                localMessages.push({
+                  role: "user",
+                  content: `Compare these listings`,
+                  messageType: "compare",
+                  timestamp: compare.createdAt
+                });
               }
-            } catch (e) {
-              console.error('Failed to load compare scan data:', e);
+              if (compare.answer) {
+                localMessages.push({
+                  role: "assistant",
+                  content: compare.answer,
+                  isComparison: true,
+                  comparedScans: {
+                    scan1: compare.firstListing,
+                    scan2: compare.secondListing
+                  },
+                  timestamp: compare.createdAt
+                });
+              }
+              localMessages.push({
+                role: "assistant",
+                content: "Do you have any question...",
+                timestamp: compare.createdAt
+              });
+              setMessages(localMessages);
+              return;
+            } else {
+              // For backend compares without local fallback, show more helpful error
+              console.error('Failed to load compare chat:', error, 'chatId:', chatIdToLoad);
+              Alert.alert(
+                'Error', 
+                'Could not load comparison details. The comparison may have been deleted or you may not have access to it.',
+                [{ text: 'OK' }]
+              );
+              return;
             }
           }
           
-          // Extract URLs from messages if scan data is not available (for fallback)
-          let fallbackScan1 = compareScanData?.scan1 || null;
-          let fallbackScan2 = compareScanData?.scan2 || null;
+          // Check if chatData exists and has required structure
+          if (!chatData) {
+            console.error('No chat data returned for chatId:', chatIdToLoad);
+            Alert.alert('Error', 'No comparison data found. Please try again.');
+            return;
+          }
           
-          // If scan data fetch failed, try to extract URLs from messages
-          if (!fallbackScan1 || !fallbackScan2) {
-            // Try to find assistant message with comparison content
-            const comparisonMessage = (chatData.messages || []).find(msg => 
-              msg.role === 'assistant' && 
-              msg.content && 
-              (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))
-            );
+          // Web app: setMessages(data.messages.map(...)) - shows ALL messages immediately
+          // Always use fresh messages from backend (includes all chat history)
+          if (chatData && chatData.chat) {
+            // console.log('✅ Chat data fetched:', chatData);
             
-            if (comparisonMessage) {
-              // Improved URL regex that handles URLs on separate lines and various formats
-              const urlRegex = /https?:\/\/[^\s\n\)]+/g;
-              const urls = comparisonMessage.content.match(urlRegex) || [];
+            // Check if we have messages (even if empty array)
+            const messages = chatData.messages || [];
+            
+            // If it's a compare chat, fetch the scan data for both scans (same as web frontend)
+            let compareScanData = null;
+            if (chatData.chat.type === 'compare' && chatData.chat.scan_ids && chatData.chat.scan_ids.length >= 2) {
+              try {
+                // Fetch scan data for both scans using /scan/{scanId} endpoint (same as web frontend)
+                const [scan1Result, scan2Result] = await Promise.all([
+                  apiClient.getScanById(chatData.chat.scan_ids[0]),
+                  apiClient.getScanById(chatData.chat.scan_ids[1])
+                ]);
+                
+                if (scan1Result.data && scan2Result.data) {
+                  compareScanData = {
+                    scan1: scan1Result.data,
+                    scan2: scan2Result.data
+                  };
+                }
+              } catch (e) {
+                console.error('Failed to load compare scan data:', e);
+              }
+            }
+            
+            // Extract URLs from messages if scan data is not available (for fallback)
+            let fallbackScan1 = compareScanData?.scan1 || null;
+            let fallbackScan2 = compareScanData?.scan2 || null;
+            
+            // If scan data fetch failed, try to extract URLs from messages
+            if (!fallbackScan1 || !fallbackScan2) {
+              // Try to find assistant message with comparison content
+              const comparisonMessage = (chatData.messages || []).find(msg => 
+                msg.role === 'assistant' && 
+                msg.content && 
+                (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))
+              );
               
-              if (urls.length >= 2) {
-                // Extract titles from content (handle multi-line titles)
-                let title1 = null;
-                let title2 = null;
+              if (comparisonMessage) {
+                // Improved URL regex that handles URLs on separate lines and various formats
+                const urlRegex = /https?:\/\/[^\s\n\)]+/g;
+                const urls = comparisonMessage.content.match(urlRegex) || [];
                 
-                // Match Listing A: followed by title (may be on next line)
-                const listingAMatch = comparisonMessage.content.match(/Listing A:\s*\n?([^\n]+)/);
-                const listingBMatch = comparisonMessage.content.match(/Listing B:\s*\n?([^\n]+)/);
-                
-                if (listingAMatch) {
-                  title1 = listingAMatch[1].trim();
-                }
-                if (listingBMatch) {
-                  title2 = listingBMatch[1].trim();
-                }
-                
-                // Set fallback scan data with URLs (for fallback to /compare endpoint)
-                if (!fallbackScan1) {
-                  fallbackScan1 = {
-                    listing_url: urls[0],
-                    listing_title: title1
-                  };
-                }
-                if (!fallbackScan2) {
-                  fallbackScan2 = {
-                    listing_url: urls[1],
-                    listing_title: title2
-                  };
+                if (urls.length >= 2) {
+                  // Extract titles from content (handle multi-line titles)
+                  let title1 = null;
+                  let title2 = null;
+                  
+                  // Match Listing A: followed by title (may be on next line)
+                  const listingAMatch = comparisonMessage.content.match(/Listing A:\s*\n?([^\n]+)/);
+                  const listingBMatch = comparisonMessage.content.match(/Listing B:\s*\n?([^\n]+)/);
+                  
+                  if (listingAMatch) {
+                    title1 = listingAMatch[1].trim();
+                  }
+                  if (listingBMatch) {
+                    title2 = listingBMatch[1].trim();
+                  }
+                  
+                  // Set fallback scan data with URLs (for fallback to /compare endpoint)
+                  if (!fallbackScan1) {
+                    fallbackScan1 = {
+                      listing_url: urls[0],
+                      listing_title: title1
+                    };
+                  }
+                  if (!fallbackScan2) {
+                    fallbackScan2 = {
+                      listing_url: urls[1],
+                      listing_title: title2
+                    };
+                  }
                 }
               }
             }
-          }
-          
-          // Set current compare chat for AI questions (same as web frontend)
-          const compareChat = {
-            id: compare.chatId,
-            type: 'compare',
-            title: compare.title,
-            created_at: chatData.chat.created_at,
-            scan1: fallbackScan1,
-            scan2: fallbackScan2,
-            messages: chatData.messages || []
-          };
-          setCurrentCompareChat(compareChat);
-          setChatId(compareChat.id);
-          
-          // Save current chat ID (same as web frontend)
-          await AsyncStorage.setItem('current_compare_chat_id', compareChat.id);
-          
-          // Process messages and format them for display (matching web app loadChat)
-          // Ensure all user messages (AI questions) are included
-          const processedMessages = (chatData.messages || [])
-            .filter((msg) => {
-              // Include all messages that have content
-              // User messages should always be included if they have content
-              if (msg.role === 'user' && msg.content && msg.content.trim() !== '') {
-                return true;
-              }
-              // Include assistant messages with content
-              if (msg.role === 'assistant' && msg.content && msg.content.trim() !== '') {
-                return true;
-              }
-              // Include assistant messages that are comparison results (even if content is processed)
-              if (msg.role === 'assistant' && msg.content && 
-                  (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
-                return true;
-              }
-              return false;
-            })
-            .map((msg, index) => {
+            
+            // Set current compare chat for AI questions (same as web frontend)
+            // Use chatIdToLoad instead of compare.chatId to ensure we use the correct ID
+            const compareChat = {
+              id: chatIdToLoad, // Use the chatId we loaded from
+              type: 'compare',
+              title: compare.title,
+              created_at: chatData.chat.created_at,
+              scan1: fallbackScan1,
+              scan2: fallbackScan2,
+              messages: chatData.messages || [] // Store fresh messages from backend
+            };
+            setCurrentCompareChat(compareChat);
+            setChatId(chatIdToLoad); // Set chatId to the one we loaded
+            
+            // Save current chat ID (same as web frontend)
+            await AsyncStorage.setItem('current_compare_chat_id', chatIdToLoad);
+            
+            // Process messages and format them for display (same as web app - show ALL messages)
+            // Web app: setMessages(data.messages.map(...)) - shows all messages without filtering
+            const processedMessages = messages.map((msg, index) => {
               const message = {
                 role: msg.role,
                 content: msg.content || '',
@@ -815,12 +894,87 @@ const CompareScreen = ({ navigation, route }) => {
               
               return message;
             });
-          
-          // Set messages to display chat history (matching web app)
-          setMessages(processedMessages);
-          
-        } else {
-          Alert.alert('Error', 'No comparison data found');
+            
+            // Set messages to display chat history (matching web app)
+            setMessages(processedMessages);
+          } else {
+            // chatData exists but doesn't have chat property - try fallback
+            if (compare.firstListing && compare.secondListing && compare.answer) {
+              // Fall back to local comparison data
+              setCurrentCompareChat(compare);
+              setChatId(compare.id);
+              await AsyncStorage.setItem('current_compare_chat_id', compare.id);
+              
+              const localMessages = [];
+              if (compare.firstListing && compare.secondListing) {
+                localMessages.push({
+                  role: "user",
+                  content: `Compare these listings`,
+                  messageType: "compare",
+                  timestamp: compare.createdAt
+                });
+              }
+              if (compare.answer) {
+                localMessages.push({
+                  role: "assistant",
+                  content: compare.answer,
+                  isComparison: true,
+                  comparedScans: {
+                    scan1: compare.firstListing,
+                    scan2: compare.secondListing
+                  },
+                  timestamp: compare.createdAt
+                });
+              }
+              localMessages.push({
+                role: "assistant",
+                content: "Do you have any question...",
+                timestamp: compare.createdAt
+              });
+              setMessages(localMessages);
+            } else {
+              Alert.alert('Error', 'No comparison data found');
+            }
+          }
+        } catch (apiError) {
+          // Handle unexpected errors
+          console.error('Error loading compare chat:', apiError);
+          // Try fallback to local data if available
+          if (compare.firstListing && compare.secondListing && compare.answer) {
+            setCurrentCompareChat(compare);
+            setChatId(compare.id);
+            await AsyncStorage.setItem('current_compare_chat_id', compare.id);
+            
+            const localMessages = [];
+            if (compare.firstListing && compare.secondListing) {
+              localMessages.push({
+                role: "user",
+                content: `Compare these listings`,
+                messageType: "compare",
+                timestamp: compare.createdAt
+              });
+            }
+            if (compare.answer) {
+              localMessages.push({
+                role: "assistant",
+                content: compare.answer,
+                isComparison: true,
+                comparedScans: {
+                  scan1: compare.firstListing,
+                  scan2: compare.secondListing
+                },
+                timestamp: compare.createdAt
+              });
+            }
+            localMessages.push({
+              role: "assistant",
+              content: "Do you have any question...",
+              timestamp: compare.createdAt
+            });
+            setMessages(localMessages);
+          } else {
+            Alert.alert('Error', 'Could not load comparison details. Please try again.');
+          }
         }
       } else {
         // For local comparisons, we already have all the data
@@ -964,56 +1118,45 @@ const CompareScreen = ({ navigation, route }) => {
       // Save current chat ID
       await AsyncStorage.setItem('current_compare_chat_id', compareChat.id);
 
-      // Process messages and format them for display (same logic as handleRecentComparePress)
-      const processedMessages = chatMessages
-        .filter((msg) => {
-          if (msg.role === 'user' && msg.content && msg.content.trim() !== '') {
-            return true;
-          }
-          if (msg.role === 'assistant' && msg.content && msg.content.trim() !== '') {
-            return true;
-          }
-          if (msg.role === 'assistant' && msg.content && 
-              (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
-            return true;
-          }
-          return false;
-        })
-        .map((msg) => {
-          const message = {
-            role: msg.role,
-            content: msg.content || '',
-            timestamp: msg.created_at
-          };
+      // Process messages and format them for display (same as web app - show ALL messages)
+      // Web app: setMessages(data.messages.map(...)) - shows all messages without filtering
+      const processedMessages = chatMessages.map((msg, index) => {
+        const message = {
+          role: msg.role,
+          content: msg.content || '',
+          timestamp: msg.created_at || msg.timestamp
+        };
+        
+        // Set messageType for user messages (same as web app)
+        if (msg.role === 'user') {
+          message.messageType = "compare";
+        }
+        
+        // Mark comparison messages and extract scan data
+        if (msg.role === 'assistant' && msg.content && 
+            (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
+          message.isComparison = true;
           
-          if (msg.role === 'user') {
-            message.messageType = "compare";
-          }
-          
-          if (msg.role === 'assistant' && msg.content && 
-              (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))) {
-            message.isComparison = true;
-            
-            if (compareScanData) {
-              message.comparedScans = compareScanData;
-              const analysisStart = msg.content.indexOf('Comparative Analysis:');
-              if (analysisStart !== -1) {
-                message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
-              }
-            } else if (fallbackScan1 && fallbackScan2) {
-              message.comparedScans = {
-                scan1: fallbackScan1,
-                scan2: fallbackScan2
-              };
-              const analysisStart = msg.content.indexOf('Comparative Analysis:');
-              if (analysisStart !== -1) {
-                message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
-              }
+          if (compareScanData) {
+            message.comparedScans = compareScanData;
+            const analysisStart = msg.content.indexOf('Comparative Analysis:');
+            if (analysisStart !== -1) {
+              message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
+            }
+          } else if (fallbackScan1 && fallbackScan2) {
+            message.comparedScans = {
+              scan1: fallbackScan1,
+              scan2: fallbackScan2
+            };
+            const analysisStart = msg.content.indexOf('Comparative Analysis:');
+            if (analysisStart !== -1) {
+              message.content = msg.content.substring(analysisStart + 'Comparative Analysis:'.length).trim();
             }
           }
-          
-          return message;
-        });
+        }
+        
+        return message;
+      });
 
       setMessages(processedMessages);
     } catch (error) {
@@ -1040,11 +1183,14 @@ const CompareScreen = ({ navigation, route }) => {
         };
         
         // Always fetch fresh chat messages from backend (don't rely on passed messages)
-        if (compareToLoad.id && compareToLoad.source === 'backend') {
+        // This is critical - always fetch fresh to get latest chat history including new AI conversations
+        // Try to fetch from backend if we have an ID (even if source isn't explicitly 'backend')
+        if (compareToLoad.id && !compareToLoad.id.startsWith('compare-') && !compareToLoad.id.startsWith('local_')) {
+          // This looks like a backend chatId, always fetch fresh messages
           try {
             const { data: chatData, error: chatError } = await apiClient.getChat(compareToLoad.id);
             if (!chatError && chatData && chatData.messages) {
-              // Use fresh messages from backend
+              // Use fresh messages from backend (this includes all chat history including new AI conversations)
               await loadCompareWithMessages(compare, chatData.messages);
             } else if (compareToLoad.chatMessages && compareToLoad.chatMessages.length > 0) {
               // Fallback to provided messages if backend fetch fails
@@ -1060,6 +1206,18 @@ const CompareScreen = ({ navigation, route }) => {
             } else {
               await handleRecentComparePress(compare);
             }
+          }
+        } else if (compareToLoad.source === 'backend' && compareToLoad.id) {
+          // Also try if source is explicitly 'backend'
+          try {
+            const { data: chatData, error: chatError } = await apiClient.getChat(compareToLoad.id);
+            if (!chatError && chatData && chatData.messages) {
+              await loadCompareWithMessages(compare, chatData.messages);
+            } else {
+              await handleRecentComparePress(compare);
+            }
+          } catch (e) {
+            await handleRecentComparePress(compare);
           }
         } else {
           // For local compares or if no chatId, use provided messages or handleRecentComparePress
@@ -1635,18 +1793,176 @@ const CompareScreen = ({ navigation, route }) => {
     }, 100);
 
     try {
-      // Same logic as web app frontend (ChatInterface.jsx)
-      // Check if this is a local compare chat (starts with 'compare-')
-      if (chatId && chatId.startsWith('compare-') && currentCompareChat && currentCompareChat.scan1 && currentCompareChat.scan2) {
-        // For local compare chat questions, call the /compare endpoint (same as web app)
-        try {
-          const firstUrl = currentCompareChat.scan1.listing_url || currentCompareChat.scan1.link || currentCompareChat.scan1.url;
-          const secondUrl = currentCompareChat.scan2.listing_url || currentCompareChat.scan2.link || currentCompareChat.scan2.url;
+      // FIX: Check if this is a compare chat FIRST (regardless of chatId format)
+      // If currentCompareChat exists with scan1 and scan2, it's a compare chat
+      // This handles both local compares (chatId.startsWith('compare-')) and backend compares (real chatId)
+      // Same logic as web app frontend (ChatInterface.jsx) - checks currentChat.type === 'compare'
+      
+      // Try to get URLs from currentCompareChat first
+      let firstUrl = null;
+      let secondUrl = null;
+      
+      // Check if this is a compare chat (by type or by having scan1/scan2)
+      const isCompareChat = currentCompareChat && (
+        currentCompareChat.type === 'compare' || 
+        (currentCompareChat.scan1 && currentCompareChat.scan2)
+      );
+      
+      if (currentCompareChat && currentCompareChat.scan1 && currentCompareChat.scan2) {
+        firstUrl = currentCompareChat.scan1.listing_url || currentCompareChat.scan1.link || currentCompareChat.scan1.url;
+        secondUrl = currentCompareChat.scan2.listing_url || currentCompareChat.scan2.link || currentCompareChat.scan2.url;
+      }
+      
+      // Fallback: If URLs not found but currentCompareChat exists (and it's a compare chat), try to extract from messages
+      if ((!firstUrl || !secondUrl) && isCompareChat) {
+        // Try to get URLs from currentCompareChat.messages
+        if (currentCompareChat.messages) {
+          const comparisonMessage = currentCompareChat.messages.find(msg => 
+            msg.role === 'assistant' && 
+            msg.content && 
+            (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))
+          );
           
-          if (!firstUrl || !secondUrl) {
-            throw new Error('Missing listing URLs for comparison');
+          if (comparisonMessage) {
+            const urlRegex = /https?:\/\/[^\s\n\)]+/g;
+            const urls = comparisonMessage.content.match(urlRegex) || [];
+            if (urls.length >= 2) {
+              if (!firstUrl) firstUrl = urls[0];
+              if (!secondUrl) secondUrl = urls[1];
+            }
+          }
+        }
+      }
+      
+      // Fallback: If URLs still not found, try to extract from current messages state
+      if ((!firstUrl || !secondUrl) && messages && messages.length > 0) {
+        const comparisonMessage = messages.find(msg => 
+          msg.role === 'assistant' && 
+          msg.content && 
+          (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:') || msg.isComparison)
+        );
+        
+        if (comparisonMessage) {
+          // Try to get URLs from comparedScans first
+          if (comparisonMessage.comparedScans) {
+            if (!firstUrl) {
+              firstUrl = comparisonMessage.comparedScans.scan1?.listing_url || 
+                        comparisonMessage.comparedScans.scan1?.link ||
+                        comparisonMessage.comparedScans.scan1?.url;
+            }
+            if (!secondUrl) {
+              secondUrl = comparisonMessage.comparedScans.scan2?.listing_url || 
+                         comparisonMessage.comparedScans.scan2?.link ||
+                         comparisonMessage.comparedScans.scan2?.url;
+            }
           }
           
+          // If still not found, extract from message content
+          if ((!firstUrl || !secondUrl) && comparisonMessage.content) {
+            const urlRegex = /https?:\/\/[^\s\n\)]+/g;
+            const urls = comparisonMessage.content.match(urlRegex) || [];
+            if (urls.length >= 2) {
+              if (!firstUrl) firstUrl = urls[0];
+              if (!secondUrl) secondUrl = urls[1];
+            }
+          }
+        }
+      }
+      
+      // FIX: If we have a chatId for a compare chat (backend chat), use /chat/{chatId}/ask to save messages
+      // This ensures messages are saved to the backend and can be retrieved later (same as scan chats)
+      if (chatId && !chatId.startsWith('compare-') && !chatId.startsWith('local_') && isCompareChat) {
+        // Use backend chat system for compare chats with chatId - this saves messages automatically
+        try {
+          const { data, error } = await apiClient.askChatQuestion(chatId, userQuestion);
+          
+          if (error) {
+            // Handle API errors - extract meaningful error message
+            let errorMessage = 'Sorry, I encountered an error. Please try again.';
+            const errorString = typeof error === 'string' ? error : (error?.message || String(error));
+            errorMessage = `Sorry, I encountered an error: ${errorString}`;
+            
+            // Remove typing indicator and add error message
+            const errorMsg = { 
+              role: "assistant", 
+              content: errorMessage,
+              isError: true
+            };
+            setMessages(prev => {
+              const filtered = prev.filter(msg => !msg.isTyping);
+              return [...filtered, errorMsg];
+            });
+            setIsAsking(false); // Hide typing indicator immediately after error
+          } else if (data && data.answer) {
+            // Remove typing indicator and add assistant response
+            const assistantMessage = { 
+              role: "assistant", 
+              content: data.answer
+            };
+            setMessages(prev => {
+              const filtered = prev.filter(msg => !msg.isTyping);
+              return [...filtered, assistantMessage];
+            });
+            setIsAsking(false); // Hide typing indicator immediately after response
+            
+            // Backend chat system automatically saves messages to database (same as scan chats)
+            // Deduct 0.5 scans from local balance after successful AI chat
+            await deductScanFromBalance();
+            
+            // Refresh scan balance from backend immediately (same as web app)
+            try {
+              await refreshScanBalance();
+            } catch (error) {
+              // console.error('❌ Error refreshing scan balance after AI chat:', error);
+            }
+          } else {
+            // Remove typing indicator and add fallback error message
+            const errorMessage = { 
+              role: "assistant", 
+              content: "I'm sorry, I couldn't process your question. Please try rephrasing it.",
+              isError: true
+            };
+            setMessages(prev => {
+              const filtered = prev.filter(msg => !msg.isTyping);
+              return [...filtered, errorMessage];
+            });
+            setIsAsking(false); // Hide typing indicator immediately after error
+          }
+        } catch (apiError) {
+          // Handle unexpected errors - remove typing indicator and add error
+          console.error('Error asking compare chat question:', apiError);
+          const errorMsg = apiError.message || 'Sorry, I encountered an unexpected error. Please try again.';
+          const errorMessage = { 
+            role: "assistant", 
+            content: errorMsg,
+            isError: true
+          };
+          setMessages(prev => {
+            const filtered = prev.filter(msg => !msg.isTyping);
+            return [...filtered, errorMessage];
+          });
+          setIsAsking(false); // Hide typing indicator immediately after error
+        }
+      } else if ((firstUrl && secondUrl) || isCompareChat) {
+        // For local compare chats (starting with 'compare-') or compare chats without chatId, use /compare endpoint
+        // If we don't have URLs yet but it's a compare chat, we should have extracted them above
+        // If still missing after all fallbacks, show error
+        if (!firstUrl || !secondUrl) {
+          const errorMessage = { 
+            role: "assistant", 
+            content: "I'm sorry, I couldn't find the listing URLs for this comparison. Please try reloading the comparison.",
+            isError: true
+          };
+          setMessages(prev => {
+            const filtered = prev.filter(msg => !msg.isTyping);
+            return [...filtered, errorMessage];
+          });
+          setIsAsking(false);
+          return;
+        }
+        // For local compare chat questions (no backend chatId), call the /compare endpoint
+        // Note: This doesn't save to backend chat history, but works for local compares
+        try {
           const { data, error } = await apiClient.compareListings(
             firstUrl,
             secondUrl,
@@ -1712,9 +2028,9 @@ const CompareScreen = ({ navigation, route }) => {
           });
           setIsAsking(false); // Hide typing indicator immediately after error
         }
-      } else if (chatId && !chatId.startsWith('compare-')) {
-        // Use backend chat system for non-local chats (same as web app)
-        // This handles both scan chats and backend compare chats
+      } else if (chatId && !chatId.startsWith('compare-') && !chatId.startsWith('local_') && !currentCompareChat) {
+        // Use backend chat system for non-compare chats (regular scan chats only)
+        // This handles scan chats, NOT compare chats (compare chats are handled above)
         try {
           const { data, error } = await apiClient.askChatQuestion(chatId, userQuestion);
           
@@ -1722,144 +2038,17 @@ const CompareScreen = ({ navigation, route }) => {
             // Handle API errors - extract meaningful error message
             let errorMessage = 'Sorry, I encountered an error. Please try again.';
             const errorString = typeof error === 'string' ? error : (error?.message || String(error));
-            const isInternalServerError = errorString.includes('Internal Server Error') || 
-                                        errorString.includes('500') ||
-                                        errorString.includes('internal server error');
+            errorMessage = `Sorry, I encountered an error: ${errorString}`;
             
-            if (isInternalServerError) {
-              // For Internal Server Error in compare chats, try fallback to /compare endpoint
-              // First try to get URLs from currentCompareChat.scan1/scan2, then from messages
-              let firstUrl = null;
-              let secondUrl = null;
-              
-              // Try to get URLs from currentCompareChat.scan1 and scan2
-              if (currentCompareChat && currentCompareChat.scan1 && currentCompareChat.scan2) {
-                firstUrl = currentCompareChat.scan1.listing_url || 
-                          currentCompareChat.scan1.link || 
-                          currentCompareChat.scan1.url;
-                secondUrl = currentCompareChat.scan2.listing_url || 
-                           currentCompareChat.scan2.link || 
-                           currentCompareChat.scan2.url;
-              }
-              
-              // If URLs not found, try to extract from currentCompareChat.messages
-              if ((!firstUrl || !secondUrl) && currentCompareChat && currentCompareChat.messages) {
-                const comparisonMessage = currentCompareChat.messages.find(msg => 
-                  msg.role === 'assistant' && 
-                  msg.content && 
-                  (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:'))
-                );
-                
-                if (comparisonMessage) {
-                  const urlRegex = /https?:\/\/[^\s\n]+/g;
-                  const urls = comparisonMessage.content.match(urlRegex) || [];
-                  if (urls.length >= 2) {
-                    if (!firstUrl) firstUrl = urls[0];
-                    if (!secondUrl) secondUrl = urls[1];
-                  }
-                }
-              }
-              
-              // If URLs still not found, try to extract from current messages state
-              if ((!firstUrl || !secondUrl) && messages && messages.length > 0) {
-                const comparisonMessage = messages.find(msg => 
-                  msg.role === 'assistant' && 
-                  msg.content && 
-                  (msg.content.includes('Listing A:') || msg.content.includes('Comparative Analysis:') || msg.isComparison)
-                );
-                
-                if (comparisonMessage) {
-                  // Try to get URLs from comparedScans first
-                  if (comparisonMessage.comparedScans) {
-                    if (!firstUrl) {
-                      firstUrl = comparisonMessage.comparedScans.scan1?.listing_url || 
-                                comparisonMessage.comparedScans.scan1?.link ||
-                                comparisonMessage.comparedScans.scan1?.url;
-                    }
-                    if (!secondUrl) {
-                      secondUrl = comparisonMessage.comparedScans.scan2?.listing_url || 
-                                 comparisonMessage.comparedScans.scan2?.link ||
-                                 comparisonMessage.comparedScans.scan2?.url;
-                    }
-                  }
-                  
-                  // If still not found, extract from message content
-                  if ((!firstUrl || !secondUrl) && comparisonMessage.content) {
-                    const urlRegex = /https?:\/\/[^\s\n]+/g;
-                    const urls = comparisonMessage.content.match(urlRegex) || [];
-                    if (urls.length >= 2) {
-                      if (!firstUrl) firstUrl = urls[0];
-                      if (!secondUrl) secondUrl = urls[1];
-                    }
-                  }
-                }
-              }
-              
-              // If we have both URLs, try fallback to /compare endpoint
-              if (firstUrl && secondUrl) {
-                try {
-                  console.log('🔄 Attempting fallback to /compare endpoint with URLs:', { firstUrl, secondUrl });
-                  
-                  // Fallback to /compare endpoint (same as web app for local compare chats)
-                  const { data: compareData, error: compareError } = await apiClient.compareListings(
-                    firstUrl,
-                    secondUrl,
-                    userQuestion
-                  );
-                  
-                  if (!compareError && compareData && compareData.answer) {
-                    // Success with fallback - remove typing indicator and add response
-                    console.log('✅ Fallback to /compare endpoint succeeded');
-                    const assistantMessage = { 
-                      role: "assistant", 
-                      content: compareData.answer
-                    };
-                    setMessages(prev => {
-                      const filtered = prev.filter(msg => !msg.isTyping);
-                      return [...filtered, assistantMessage];
-                    });
-                    setIsAsking(false); // Hide typing indicator immediately after response
-                    
-                    await deductScanFromBalance();
-                    try {
-                      await refreshScanBalance();
-                    } catch (error) {
-                      // Silent error
-                    }
-                    return; // Exit early on success
-                  } else {
-                    console.error('❌ Fallback /compare endpoint returned error:', compareError);
-                  }
-                } catch (fallbackError) {
-                  // Fallback also failed, continue with error message
-                  console.error('❌ Fallback /compare also failed:', fallbackError);
-                }
-              } else {
-                console.error('❌ Could not extract URLs for fallback:', { 
-                  firstUrl, 
-                  secondUrl, 
-                  hasCurrentCompareChat: !!currentCompareChat,
-                  hasMessages: !!messages && messages.length > 0
-                });
-              }
-              
-              errorMessage = 'Sorry, the server encountered an error processing your question. Please try again in a moment.';
-            } else {
-              errorMessage = `Sorry, I encountered an error: ${errorString}`;
-            }
-            
-            const newMessages = [...updatedMessages, { 
+            // Remove typing indicator and add error message
+            const errorMsg = { 
               role: "assistant", 
               content: errorMessage,
               isError: true
-            }];
+            };
             setMessages(prev => {
               const filtered = prev.filter(msg => !msg.isTyping);
-              return [...filtered, { 
-                role: "assistant", 
-                content: errorMessage,
-                isError: true
-              }];
+              return [...filtered, errorMsg];
             });
             setIsAsking(false); // Hide typing indicator immediately after error
           } else if (data && data.answer) {
