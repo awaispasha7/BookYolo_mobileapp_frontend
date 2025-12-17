@@ -5,7 +5,7 @@
 
 **Project:** BookYolo Mobile App  
 **Platform:** iOS / App Store  
-**Date:** January 2025  
+**Date:** December 2025  
 
 ---
 
@@ -543,4 +543,5 @@ For detailed deployment information, see: `DEPLOYMENT_SETUP.md`
 ---
 
 **Good luck with your deployment! 🚀**
+
 
