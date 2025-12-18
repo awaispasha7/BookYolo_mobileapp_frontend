@@ -9,6 +9,16 @@
 
 ---
 
+## 🚀 Quick Start
+
+**New to this project or just want to get started quickly?**
+
+👉 **See `QUICK_START_MACBOOK.md`** for a simple setup guide that includes Share Extension setup.
+
+**Need Share Extension setup?** See `SHARE_EXTENSION_SETUP.md` for detailed instructions.
+
+---
+
 ## 📋 Prerequisites Checklist
 
 Before starting, ensure you have:

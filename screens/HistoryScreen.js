@@ -63,6 +63,15 @@ export default function HistoryScreen({ navigation }) {
 
   const loadHistory = async () => {
     try {
+      // Check if user is authenticated before loading
+      if (!user) {
+        setScans([]);
+        setCompares([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       // Load both scans and compares
       const [scansResult, chatsResult] = await Promise.all([
         apiClient.getMyScans(),
@@ -73,7 +82,21 @@ export default function HistoryScreen({ navigation }) {
       const chats = chatsResult.data || [];
       
       if (scansResult.error && chatsResult.error) {
-        Alert.alert('Error', 'Failed to load history');
+        // Check if errors are authentication-related (user logged out)
+        const isAuthError = (scansResult.error?.message && (
+          scansResult.error.message.includes('401') || 
+          scansResult.error.message.includes('Unauthorized') || 
+          scansResult.error.message.includes('token')
+        )) || (chatsResult.error?.message && (
+          chatsResult.error.message.includes('401') || 
+          chatsResult.error.message.includes('Unauthorized') || 
+          chatsResult.error.message.includes('token')
+        ));
+        
+        // Only show error if user is still authenticated and error is not auth-related
+        if (user && !isAuthError) {
+          Alert.alert('Error', 'Failed to load history');
+        }
         return;
       }
       
@@ -265,7 +288,21 @@ export default function HistoryScreen({ navigation }) {
       setScans(enrichedScans);
       setCompares(formattedCompares);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load history');
+      // Handle authentication errors silently (user logged out)
+      const isAuthError = error.message && (
+        error.message.includes('401') || 
+        error.message.includes('Unauthorized') || 
+        error.message.includes('token')
+      );
+      
+      if (isAuthError || !user) {
+        // User is not authenticated, silently clear data
+        setScans([]);
+        setCompares([]);
+      } else if (user) {
+        // Only show error if user is still authenticated
+        Alert.alert('Error', 'Failed to load history');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -879,7 +916,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#374151',
-    marginTop: 16,
+    marginTop: 0,
     marginBottom: 8,
   },
   emptySubtitle: {

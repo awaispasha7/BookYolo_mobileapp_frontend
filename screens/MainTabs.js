@@ -155,7 +155,7 @@ export default function MainTabs() {
         name="Compare" 
         component={CompareScreen}
         options={({ navigation, route: screenRoute }) => ({
-          tabBarLabel: "New Compare",
+          tabBarLabel: "Compare",
           tabBarButton: (props) => {
             const { children, onPress, accessibilityState } = props;
             const isFocused = accessibilityState?.selected;
@@ -200,7 +200,7 @@ export default function MainTabs() {
       <Tab.Screen 
         name="History" 
         component={HistoryScreen}
-        options={{ tabBarLabel: "Scan History" }}
+        options={{ tabBarLabel: "History" }}
       />
     </Tab.Navigator>
   );

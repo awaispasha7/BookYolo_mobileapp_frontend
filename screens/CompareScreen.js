@@ -291,9 +291,13 @@ const CompareScreen = ({ navigation, route }) => {
       if (timestamp !== lastTabPressTime.current) {
         lastTabPressTime.current = timestamp;
         resetComparison();
-        // Clear the reset parameter after a short delay to allow the effect to complete
+        // Clear the reset parameter and loadCompare to ensure fresh start
         setTimeout(() => {
-          navigation.setParams({ reset: undefined, timestamp: undefined });
+          navigation.setParams({ 
+            reset: undefined, 
+            timestamp: undefined,
+            loadCompare: undefined  // Clear loadCompare to prevent restoration
+          });
         }, 100);
       }
     }
@@ -307,9 +311,14 @@ const CompareScreen = ({ navigation, route }) => {
         loadScans();
       }
       
+      // Only restore chat messages if explicitly loading a comparison from history
+      // Don't restore when starting a fresh comparison (when loadCompare param is not present)
+      const isLoadingFromHistory = route?.params?.loadCompare !== undefined;
+      
       // If there's an active chat, refresh messages to get latest chat history
       // This ensures that when user navigates back, they see the latest messages
-      if (chatId && currentCompareChat && !chatId.startsWith('compare-')) {
+      // But only if we're explicitly loading a comparison, not starting fresh
+      if (isLoadingFromHistory && chatId && currentCompareChat && !chatId.startsWith('compare-')) {
         // Only refresh if we have a backend chat (not local)
         const refreshChatMessages = async () => {
           try {
@@ -380,7 +389,7 @@ const CompareScreen = ({ navigation, route }) => {
         
         refreshChatMessages();
       }
-    }, [chatId, currentCompareChat])
+    }, [chatId, currentCompareChat, route?.params?.loadCompare, loadScans])
   );
 
   // Add navigation listener to refresh scan balance when leaving compare screen
@@ -410,10 +419,32 @@ const CompareScreen = ({ navigation, route }) => {
     isLoadingRef.current = true;
     setLoading(true);
     try {
+      // Check if user is authenticated before loading
+      if (!user) {
+        setScans([]);
+        setLoading(false);
+        isLoadingRef.current = false;
+        return;
+      }
+
       const { data, error } = await apiClient.getMyScans();
       
       if (error) {
-        Alert.alert('Error', 'Failed to load scan history');
+        // Handle authentication errors silently (user logged out)
+        const isAuthError = error.message && (
+          error.message.includes('401') || 
+          error.message.includes('Unauthorized') || 
+          error.message.includes('token')
+        );
+        
+        if (isAuthError || !user) {
+          setScans([]);
+          return;
+        }
+        // Only show error if user is still authenticated
+        if (user) {
+          Alert.alert('Error', 'Failed to load scan history');
+        }
         return;
       }
       
@@ -443,7 +474,19 @@ const CompareScreen = ({ navigation, route }) => {
       
       setScans(enrichedScans);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load scan history');
+      // Handle authentication errors silently (user logged out)
+      const isAuthError = error.message && (
+        error.message.includes('401') || 
+        error.message.includes('Unauthorized') || 
+        error.message.includes('token')
+      );
+      
+      if (isAuthError || !user) {
+        setScans([]);
+      } else if (user) {
+        // Only show error if user is still authenticated
+        Alert.alert('Error', 'Failed to load scan history');
+      }
     } finally {
       setLoading(false);
       isLoadingRef.current = false;
@@ -4024,8 +4067,6 @@ const styles = StyleSheet.create({
   },
   assistantMessageBubble: {
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e9e8ea",
   },
   postCompareMessageBubble: {
     backgroundColor: "#ffffff",

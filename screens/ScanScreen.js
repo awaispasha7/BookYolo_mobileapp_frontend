@@ -139,9 +139,14 @@ export default function ScanScreen({ navigation, route }) {
       if (timestamp !== lastTabPressTime.current) {
         lastTabPressTime.current = timestamp;
         startNewChat();
-        // Clear the reset parameter after a short delay to allow the effect to complete
+        // Clear the reset parameter and scanHistoryData to ensure fresh start
         setTimeout(() => {
-          navigation.setParams({ reset: undefined, timestamp: undefined });
+          navigation.setParams({ 
+            reset: undefined, 
+            timestamp: undefined,
+            scanHistoryData: undefined,  // Clear scanHistoryData to prevent restoration
+            shareUrl: undefined  // Also clear shareUrl if present
+          });
         }, 100);
       }
     }

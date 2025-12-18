@@ -19,6 +19,13 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
+        ],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "bookyolo"
+            ]
+          }
         ]
       }
     },
@@ -39,7 +46,8 @@
       [
         "expo-notifications"
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withShareExtension.js"
     ]
   }
 }

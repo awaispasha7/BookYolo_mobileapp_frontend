@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaVie
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import apiClient from '../lib/apiClient';
-import { BOOK1_LOGO } from '../constants/images';
+import { YOLO_LOGO } from '../constants/images';
 
 const { width, height } = Dimensions.get('window');
 
@@ -146,47 +146,49 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        {/* Header with Back Button */}
+        <View style={styles.topHeader}>
+          <View style={styles.backButtonContainer}>
+            <BackButton 
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('Splash');
+                }
+              }}
+            />
+          </View>
+          
+          <View style={styles.headerLogoContainer}>
+          </View>
+          
+          <View style={styles.versionContainer}>
+          </View>
+        </View>
+        
+        {/* Fixed Logo */}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.fixedBrandingContainer}>
+            <Image 
+              source={YOLO_LOGO} 
+              style={styles.centerLogo}
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableWithoutFeedback>
+
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.content}>
-            {/* Header with Back Button, Logo and Version */}
-            <View style={styles.topHeader}>
-              <View style={styles.backButtonContainer}>
-                <BackButton 
-                  onPress={() => {
-                    if (navigation.canGoBack()) {
-                      navigation.goBack();
-                    } else {
-                      navigation.navigate('Splash');
-                    }
-                  }}
-                />
-              </View>
-              
-              <View style={styles.headerLogoContainer}>
-                <Image 
-                  source={BOOK1_LOGO} 
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
-              
-              <View style={styles.versionContainer}>
-                <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-              </View>
-            </View>
-            
-            {/* App Logo/Branding Area */}
+            {/* Title */}
             <View style={styles.brandingContainer}>
-              <View style={styles.logoContainer}>
-                <Ionicons name={emailSent ? "mail" : "lock-closed"} size={40} color={emailSent ? "#4CAF50" : "#1e162a"} />
-              </View>
               <Text style={styles.brandName}>
                 {emailSent ? "Check Your Email" : "Reset Password"}
               </Text>
@@ -297,43 +299,31 @@ const ForgotPasswordScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 20,
+    justifyContent: 'space-between',
+    paddingTop: 0,
     paddingHorizontal: 15,
     marginBottom: 20,
-    height: 80,
+    height: 60,
     backgroundColor: 'transparent',
-    position: 'relative',
   },
   backButtonContainer: {
-    position: 'absolute',
-    left: 15,
-    top: 28,
     alignItems: 'center',
     justifyContent: 'center',
     width: 50,
     height: 50,
   },
   headerLogoContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    height: 50,
+    backgroundColor: 'transparent',
     marginHorizontal: 20,
   },
-  logo: {
-    width: 45,
-    height: 45,
-  },
   versionContainer: {
-    position: 'absolute',
-    right: 15,
-    top: 28,
     alignItems: 'center',
     justifyContent: 'center',
     width: 85,
@@ -342,11 +332,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
-  versionText: {
-    fontSize: 8,
-    color: "#000000",
-    fontWeight: "800",
-    textAlign: 'center',
+  fixedBrandingContainer: {
+    alignItems: 'center',
+    marginTop: -50,
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+    zIndex: 1,
+  },
+  centerLogo: {
+    width: 200,
+    height: 200,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
+    marginBottom: 2,
   },
   content: {
     flex: 1,
@@ -356,29 +354,14 @@ const styles = StyleSheet.create({
   },
   brandingContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 0,
     marginBottom: 40,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   brandName: {
     fontSize: 32,
     fontWeight: '800',
     color: '#1e162a',
     marginBottom: 8,
-    letterSpacing: -0.5,
   },
   welcomeText: {
     fontSize: 16,
