@@ -27,6 +27,7 @@ export default function HistoryScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingScanId, setLoadingScanId] = useState(null);
   const lastUserIdRef = useRef(null);
+  const lastRefreshTimeRef = useRef(null);
 
   // Helper function to get user-specific storage keys
   const getUserStorageKey = (baseKey) => {
@@ -54,17 +55,37 @@ export default function HistoryScreen({ navigation }) {
   // Refresh history when screen comes into focus (e.g., after a new scan)
   useFocusEffect(
     React.useCallback(() => {
-      // Only refresh if not already loading
-      if (!loading) {
-        loadHistory();
+      // Always refresh when screen comes into focus to get latest scans
+      // Check if we recently refreshed (within last 2 seconds) to avoid excessive calls
+      const timeSinceLastRefresh = lastRefreshTimeRef.current 
+        ? Date.now() - lastRefreshTimeRef.current 
+        : Infinity;
+      
+      if (timeSinceLastRefresh > 2000) {
+        // Not recently refreshed, refresh now
+        if (!loading) {
+          loadHistory();
+        } else {
+          // If currently loading, wait a bit then refresh to ensure we get latest data
+          const timeoutId = setTimeout(() => {
+            loadHistory();
+          }, 500); // Small delay to let current load finish
+          return () => clearTimeout(timeoutId);
+        }
+      } else {
+        // Recently refreshed, skip to avoid excessive API calls
+        console.log('🔵 [HistoryScreen] Skipping refresh - recently refreshed');
       }
     }, [loading])
   );
 
   const loadHistory = async () => {
+    console.log('🔵 [HistoryScreen] loadHistory called');
+    lastRefreshTimeRef.current = Date.now();
     try {
       // Check if user is authenticated before loading
       if (!user) {
+        console.log('🔵 [HistoryScreen] No user, clearing data');
         setScans([]);
         setCompares([]);
         setLoading(false);
@@ -72,33 +93,144 @@ export default function HistoryScreen({ navigation }) {
         return;
       }
 
+      console.log('🔵 [HistoryScreen] User authenticated, loading history...');
+
       // Load both scans and compares
       const [scansResult, chatsResult] = await Promise.all([
         apiClient.getMyScans(),
-        apiClient.getChats().catch(() => ({ data: [], error: null })) // Handle error gracefully
+        apiClient.getChats().catch((err) => {
+          console.log('🔵 [HistoryScreen] Chats request failed, using empty array:', err);
+          return { data: [], error: null };
+        })
       ]);
       
-      const scans = scansResult.data || [];
-      const chats = chatsResult.data || [];
+      console.log('🔵 [HistoryScreen] API Results:', {
+        scansResult: {
+          hasData: !!scansResult?.data,
+          dataType: scansResult?.data ? typeof scansResult.data : 'null',
+          isArray: Array.isArray(scansResult?.data),
+          hasScansProperty: !!(scansResult?.data?.scans),
+          dataLength: Array.isArray(scansResult?.data) ? scansResult.data.length : (scansResult?.data?.scans?.length || 0),
+          hasError: !!scansResult?.error,
+          error: scansResult?.error
+        },
+        chatsResult: {
+          hasData: !!chatsResult?.data,
+          dataType: chatsResult?.data ? typeof chatsResult.data : 'null',
+          isArray: Array.isArray(chatsResult?.data),
+          hasChatsProperty: !!(chatsResult?.data?.chats),
+          dataLength: Array.isArray(chatsResult?.data) ? chatsResult.data.length : (chatsResult?.data?.chats?.length || 0),
+          hasError: !!chatsResult?.error,
+          error: chatsResult?.error
+        }
+      });
       
-      if (scansResult.error && chatsResult.error) {
-        // Check if errors are authentication-related (user logged out)
-        const isAuthError = (scansResult.error?.message && (
-          scansResult.error.message.includes('401') || 
-          scansResult.error.message.includes('Unauthorized') || 
-          scansResult.error.message.includes('token')
-        )) || (chatsResult.error?.message && (
-          chatsResult.error.message.includes('401') || 
-          chatsResult.error.message.includes('Unauthorized') || 
-          chatsResult.error.message.includes('token')
-        ));
+      // Handle both array and paginated object responses from /my-scans
+      let scans = [];
+      if (scansResult && scansResult.data) {
+        if (Array.isArray(scansResult.data)) {
+          // Backward compatible: direct array response (when page=1 and total <= 30)
+          scans = scansResult.data;
+          console.log('🔵 [HistoryScreen] Scans: Direct array format, count:', scans.length);
+        } else if (scansResult.data.scans && Array.isArray(scansResult.data.scans)) {
+          // Paginated response: extract scans array (when total > 30)
+          scans = scansResult.data.scans;
+          console.log('🔵 [HistoryScreen] Scans: Paginated format, count:', scans.length, 'pagination:', scansResult.data.pagination);
+        } else {
+          console.log('⚠️ [HistoryScreen] Scans: Unexpected data format:', {
+            dataType: typeof scansResult.data,
+            keys: scansResult.data ? Object.keys(scansResult.data) : 'null',
+            data: scansResult.data
+          });
+        }
+      } else {
+        console.log('⚠️ [HistoryScreen] Scans: No data in result');
+      }
+      
+      // Handle both array and paginated object responses from /chats (same as /my-scans)
+      let chats = [];
+      if (chatsResult && chatsResult.data) {
+        if (Array.isArray(chatsResult.data)) {
+          // Backward compatible: direct array response
+          chats = chatsResult.data;
+          console.log('🔵 [HistoryScreen] Chats: Direct array format, count:', chats.length);
+        } else if (chatsResult.data.chats && Array.isArray(chatsResult.data.chats)) {
+          // Paginated response: extract chats array
+          chats = chatsResult.data.chats;
+          console.log('🔵 [HistoryScreen] Chats: Paginated format, count:', chats.length, 'pagination:', chatsResult.data.pagination);
+        } else {
+          console.log('⚠️ [HistoryScreen] Chats: Unexpected data format:', {
+            dataType: typeof chatsResult.data,
+            keys: chatsResult.data ? Object.keys(chatsResult.data) : 'null',
+            data: chatsResult.data
+          });
+        }
+      } else {
+        console.log('⚠️ [HistoryScreen] Chats: No data in result');
+      }
+      console.log('🔵 [HistoryScreen] Chats count:', chats.length);
+      
+      // Check for errors - only show error if we have no data from either request
+      const scansHasError = scansResult && scansResult.error;
+      const chatsHasError = chatsResult && chatsResult.error;
+      
+      console.log('🔵 [HistoryScreen] Error check:', {
+        scansHasError,
+        chatsHasError,
+        scansCount: scans.length,
+        chatsCount: chats.length,
+        hasAnyData: scans.length > 0 || chats.length > 0
+      });
+      
+      // Only proceed with error handling if we have no data to display
+      if (scans.length === 0 && chats.length === 0) {
+        console.log('⚠️ [HistoryScreen] No data from either request, checking errors...');
         
-        // Only show error if user is still authenticated and error is not auth-related
-        if (user && !isAuthError) {
+        // Check if errors are authentication-related (user logged out)
+        const scansIsAuthError = scansHasError && (
+          (typeof scansResult.error === 'string' && (
+            scansResult.error.includes('401') || 
+            scansResult.error.includes('Unauthorized') || 
+            scansResult.error.includes('token')
+          )) || (scansResult.error?.message && (
+            scansResult.error.message.includes('401') || 
+            scansResult.error.message.includes('Unauthorized') || 
+            scansResult.error.message.includes('token')
+          ))
+        );
+        
+        const chatsIsAuthError = chatsHasError && (
+          (typeof chatsResult.error === 'string' && (
+            chatsResult.error.includes('401') || 
+            chatsResult.error.includes('Unauthorized') || 
+            chatsResult.error.includes('token')
+          )) || (chatsResult.error?.message && (
+            chatsResult.error.message.includes('401') || 
+            chatsResult.error.message.includes('Unauthorized') || 
+            chatsResult.error.message.includes('token')
+          ))
+        );
+        
+        console.log('🔵 [HistoryScreen] Auth error check:', {
+          scansIsAuthError,
+          chatsIsAuthError,
+          user: !!user,
+          willShowError: user && (scansHasError || chatsHasError) && !scansIsAuthError && !chatsIsAuthError
+        });
+        
+        // Only show error if user is still authenticated and errors are not auth-related
+        if (user && (scansHasError || chatsHasError) && !scansIsAuthError && !chatsIsAuthError) {
+          console.log('❌ [HistoryScreen] Showing error alert: Failed to load history');
           Alert.alert('Error', 'Failed to load history');
+        } else {
+          console.log('🔵 [HistoryScreen] Not showing error (auth error or no user)');
         }
         return;
       }
+      
+      console.log('✅ [HistoryScreen] Has data, continuing processing...');
+      
+      // If we have data, continue processing (even if there were some errors)
       
       // Filter to show only unique Airbnb links (most recent scan for each URL)
       const uniqueScans = filterUniqueScans(scans);
@@ -285,9 +417,24 @@ export default function HistoryScreen({ navigation }) {
       enrichedScans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       formattedCompares.sort((a, b) => new Date(b.date) - new Date(a.date));
       
+      console.log('✅ [HistoryScreen] Processing complete:', {
+        enrichedScansCount: enrichedScans.length,
+        formattedComparesCount: formattedCompares.length
+      });
+      
       setScans(enrichedScans);
       setCompares(formattedCompares);
+      
+      console.log('✅ [HistoryScreen] State updated successfully');
     } catch (error) {
+      console.error('❌ [HistoryScreen] Error in loadHistory:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorType: typeof error,
+        errorString: String(error),
+        user: !!user
+      });
+      
       // Handle authentication errors silently (user logged out)
       const isAuthError = error.message && (
         error.message.includes('401') || 
@@ -295,15 +442,24 @@ export default function HistoryScreen({ navigation }) {
         error.message.includes('token')
       );
       
+      console.log('🔵 [HistoryScreen] Error handling:', {
+        isAuthError,
+        hasUser: !!user,
+        willShowError: !isAuthError && user
+      });
+      
       if (isAuthError || !user) {
         // User is not authenticated, silently clear data
+        console.log('🔵 [HistoryScreen] Clearing data (auth error or no user)');
         setScans([]);
         setCompares([]);
       } else if (user) {
         // Only show error if user is still authenticated
+        console.log('❌ [HistoryScreen] Showing error alert from catch block');
         Alert.alert('Error', 'Failed to load history');
       }
     } finally {
+      console.log('🔵 [HistoryScreen] Finally block: setting loading states to false');
       setLoading(false);
       setRefreshing(false);
     }
@@ -418,31 +574,48 @@ export default function HistoryScreen({ navigation }) {
       
       if (data) {
         // Find chatId for this scan to load chat history
+        // OPTIMIZATION: Use scan_id from chats array directly (already available from /chats endpoint)
+        // This avoids calling /chat/{chatId} for every chat, making it much faster
         let chatId = null;
         let chatMessages = null;
         
         try {
           const { data: chats, error: chatsError } = await apiClient.getChats();
-          if (!chatsError && chats && Array.isArray(chats)) {
-            // Filter to only scan-type chats
-            const scanChats = chats.filter(chat => chat.type === 'scan');
+          if (!chatsError && chats) {
+            // Handle both array and paginated object responses from /chats
+            const chatsArray = Array.isArray(chats) ? chats : (chats.chats || []);
             
-            // Check each scan chat to find the one with matching scan_id
-            for (const chat of scanChats) {
+            // Filter to only scan-type chats and find matching scan_id directly
+            // The /chats endpoint already includes scan_id, so we can match directly
+            const matchingChat = chatsArray.find(chat => 
+              chat.type === 'scan' && 
+              chat.scan_id && 
+              chat.scan_id === scan.id
+            );
+            
+            if (matchingChat) {
+              chatId = matchingChat.id;
+              console.log('🔵 [HistoryScreen] Found chatId from chats array:', chatId, 'for scan_id:', scan.id);
+              
+              // Now fetch chat messages only once (not for every chat)
               try {
-                const { data: chatData, error: chatError } = await apiClient.getChat(chat.id);
-                if (!chatError && chatData?.chat?.scan_id === scan.id) {
-                  chatId = chat.id;
-                  chatMessages = chatData.messages || [];
-                  break; // Found it, stop searching
+                const { data: chatData, error: chatError } = await apiClient.getChat(chatId);
+                if (!chatError && chatData && chatData.messages) {
+                  chatMessages = chatData.messages;
+                  console.log('🔵 [HistoryScreen] Loaded chat messages:', chatMessages.length, 'messages');
+                } else {
+                  console.log('⚠️ [HistoryScreen] No chat messages found or error:', chatError);
                 }
               } catch (e) {
-                // Continue to next chat if this one fails
-                continue;
+                console.log('⚠️ [HistoryScreen] Error loading chat messages:', e.message);
+                // Continue without messages - user can still view scan
               }
+            } else {
+              console.log('⚠️ [HistoryScreen] No matching chat found for scan_id:', scan.id);
             }
           }
         } catch (error) {
+          console.log('⚠️ [HistoryScreen] Error fetching chats:', error.message);
           // Silent error - chatId will remain null, but user can still view scan results
         }
         

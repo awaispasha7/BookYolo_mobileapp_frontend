@@ -60,9 +60,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   const handleInputChange = (text) => {
     setEmail(text);
-    if (text && !validateEmail(text)) {
-      setEmailError('Please enter a valid email address');
-    } else {
+    // Clear error while typing - validation happens on blur
+    if (emailError) {
       setEmailError('');
     }
     
@@ -234,7 +233,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
                         clearTimeout(keyboardDismissTimer.current);
                       }
                     }}
-                    onBlur={() => setEmailFocused(false)}
+                    onBlur={() => {
+                      setEmailFocused(false);
+                      // Validate email when user finishes typing
+                      if (email && !validateEmail(email)) {
+                        setEmailError('Please enter a valid email address');
+                      } else {
+                        setEmailError('');
+                      }
+                    }}
                     onSubmitEditing={handleResetPassword}
                   />
                 </View>

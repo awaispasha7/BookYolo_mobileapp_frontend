@@ -39,3 +39,5 @@ bookyolo://scan?url=https%3A%2F%2Fwww.airbnb.com%2Frooms%2F12345
 
 The deep link handler in `lib/deepLinkHandler.js` processes this and navigates to the Scan screen.
 
+
+
