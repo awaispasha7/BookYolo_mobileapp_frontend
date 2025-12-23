@@ -571,16 +571,47 @@ export default function ScanScreen({ navigation, route }) {
         }
       }
     } catch (e) {
-      setError(e.message || String(e));
-      
-      // Remove typing indicator and add error message
-      setMessages(prev => {
-        const filtered = prev.filter(msg => !msg.isTyping);
-        return [...filtered, {
-          role: "assistant",
-          content: `Sorry, I couldn't scan that listing. ${e.message}`,
-          isError: true
-        }];
+      const rawMessage = (e?.message || String(e) || "").toString();
+      const msgLower = rawMessage.toLowerCase();
+
+      // Match web app behavior for special blue-card cases
+      const isNotInScope =
+        rawMessage === "LISTING_NOT_IN_SCOPE" ||
+        msgLower.includes("listing not found") ||
+        msgLower.includes("404");
+
+      const isAlreadyScanned = msgLower.includes("already scanned this listing");
+
+      let errorContent = rawMessage;
+      if (isNotInScope) {
+        // Same message as web app (kept as-is, including spacing)
+        errorContent =
+          "We couldn't find this listing in our database.This property does not exist in our database yet. Please try another listing from Airbnb, Booking.com, or Agoda.";
+      } else if (isAlreadyScanned) {
+        // Same message as web app
+        errorContent =
+          "You’ve already scanned this listing. Please open it from Recent Scans, or paste a different property URL.";
+      } else {
+        errorContent = `Sorry, I couldn't scan that listing. ${rawMessage}`;
+      }
+
+      setError(rawMessage);
+
+      // Remove typing indicator and add message
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => !msg.isTyping);
+        return [
+          ...filtered,
+          {
+            role: "assistant",
+            content: errorContent,
+            // Blue-card cases should NOT use red error styling
+            isError: !(isNotInScope || isAlreadyScanned),
+            isNotInScope,
+            isAlreadyScanned,
+            alreadyScannedUrl: isAlreadyScanned ? url : null,
+          },
+        ];
       });
     } finally {
       setIsLoading(false);
@@ -865,10 +896,78 @@ export default function ScanScreen({ navigation, route }) {
     );
   };
 
+  const BlueInfoCard = ({ variant, onOpenRecentScans, onScanDifferentUrl }) => {
+    const isAlready = variant === "already_scanned";
+
+    return (
+      <View style={styles.blueCard}>
+        <View style={styles.blueCardHeaderRow}>
+          <View style={styles.blueIconCircle}>
+            <Ionicons name="information" size={18} color="#1d4ed8" />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={styles.blueCardTitle}>
+              {isAlready ? "Already Scanned" : "Listing Not Found"}
+            </Text>
+            <Text style={styles.blueCardBody}>
+              {isAlready
+                ? "You’ve already scanned this listing. Please open it from Recent Scans, or paste a different property URL."
+                : "We couldn't find this listing in our database.This property does not exist in our database yet. Please try another listing from Airbnb, Booking.com, or Agoda."}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.blueDivider} />
+
+        {isAlready ? (
+          <View>
+            <Text style={styles.blueCardSectionLabel}>NEXT STEPS</Text>
+
+            <View style={styles.blueButtonRow}>
+              <TouchableOpacity
+                style={styles.blueButton}
+                onPress={onOpenRecentScans}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.blueButtonText}>Open from Recent Scans</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.blueButton}
+                onPress={onScanDifferentUrl}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.blueButtonText}>Scan a different URL</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.blueCardSectionLabel}>SUPPORTED PLATFORMS</Text>
+
+            <View style={styles.blueChipRow}>
+              <View style={styles.blueChip}>
+                <Text style={styles.blueChipText}>Airbnb</Text>
+              </View>
+              <View style={styles.blueChip}>
+                <Text style={styles.blueChipText}>Booking.com</Text>
+              </View>
+              <View style={styles.blueChip}>
+                <Text style={styles.blueChipText}>Agoda</Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === "user";
     const isError = message.isError;
     const isTyping = message.isTyping;
+    const isInfoCard = !isUser && !isTyping && (message.isNotInScope || message.isAlreadyScanned);
     const isPostScanMessage = !isUser && !isError && message.content && 
       message.content.includes("Do you have any questions about this scan");
     const hasScanData = !isUser && !isError && message.scanData;
@@ -884,13 +983,24 @@ export default function ScanScreen({ navigation, route }) {
           isUser ? styles.userMessageBubble : styles.assistantMessageBubble,
           isError && styles.errorMessageBubble,
           isPostScanMessage && styles.postScanMessageBubble,
-          hasScanData && styles.scanDataMessageBubble
+          hasScanData && styles.scanDataMessageBubble,
+          isInfoCard && styles.infoCardMessageBubble
         ]}>
           {isTyping ? (
             <TypingIndicator />
+          ) : isInfoCard ? (
+            <BlueInfoCard
+              variant={message.isAlreadyScanned ? "already_scanned" : "listing_not_found"}
+              onOpenRecentScans={() => navigation.navigate("History")}
+              onScanDifferentUrl={() => {
+                startNewChat();
+                setTimeout(() => textInputRef.current?.focus?.(), 200);
+              }}
+            />
           ) : !isUser && !isError && message.scanData ? (
             // Detailed scan result display (matching web app)
-            <View style={styles.scanResultContainer}>
+            <View style={styles.scanResultCard}>
+              <View style={styles.scanResultContainer}>
               {/* Information */}
               <View style={styles.scanInfoSection}>
                 <View style={styles.scanHeaderRow}>
@@ -964,6 +1074,7 @@ export default function ScanScreen({ navigation, route }) {
                     ))}
                   </View>
                 )}
+              </View>
               </View>
             </View>
           ) : (
@@ -1175,7 +1286,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageContainer: {
-    marginBottom: 0,
+    marginBottom: 12,
     width: '100%',
   },
   postScanMessageContainer: {
@@ -1206,10 +1317,15 @@ const styles = StyleSheet.create({
   scanDataMessageBubble: {
     backgroundColor: "transparent",
     borderWidth: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingRight: 0,
-    paddingLeft: 16,
+    padding: 0,
+    maxWidth: "95%",
+  },
+  infoCardMessageBubble: {
+    backgroundColor: "transparent",
+    padding: 0,
+    borderWidth: 0,
+    maxWidth: "100%",
+    marginTop: 6,
   },
   errorMessageBubble: {
     backgroundColor: "#fee2e2",
@@ -1225,6 +1341,107 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#dc2626",
+  },
+  blueCard: {
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#93c5fd",
+    borderRadius: 14,
+    padding: 16,
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  blueCardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  blueIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    flexShrink: 0,
+  },
+  blueCardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e3a8a",
+    marginBottom: 6,
+    flexShrink: 1,
+  },
+  blueCardBody: {
+    fontSize: 14,
+    color: "#1d4ed8",
+    lineHeight: 20,
+    flexShrink: 1,
+  },
+  blueDivider: {
+    height: 1,
+    backgroundColor: "#bfdbfe",
+    marginVertical: 14,
+  },
+  blueCardSectionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1d4ed8",
+    marginBottom: 10,
+    letterSpacing: 0.5,
+  },
+  blueButtonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -5,
+  },
+  blueButton: {
+    backgroundColor: "#dbeafe",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    marginBottom: 10,
+    flexGrow: 1,
+    flexBasis: "48%",
+    minWidth: 160,
+  },
+  blueButtonText: {
+    color: "#1d4ed8",
+    fontWeight: "700",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  blueChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -5,
+  },
+  blueChip: {
+    backgroundColor: "#dbeafe",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    marginBottom: 10,
+  },
+  blueChipText: {
+    color: "#1d4ed8",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  scanResultCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e9e8ea",
+    padding: 16,
+    alignSelf: "flex-start",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   // Scan Result Styles
   scanResultContainer: {

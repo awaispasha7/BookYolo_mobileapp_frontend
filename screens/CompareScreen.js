@@ -50,6 +50,17 @@ const CompareScreen = ({ navigation, route }) => {
   const [currentCompareChat, setCurrentCompareChat] = useState(null);
   const flatListRef = useRef(null);
   const lastTabPressTime = useRef(0);
+  
+  // UI-only: inline warning when the same listing is selected for A and B
+  // (uses the same conditions already enforced by the Compare button + handleCompare validation)
+  const isSameListingSelected =
+    !!firstListing &&
+    !!secondListing &&
+    (firstListing.id === secondListing.id ||
+      firstListing.listing_url === secondListing.listing_url ||
+      (firstListing.listing_title &&
+        secondListing.listing_title &&
+        firstListing.listing_title === secondListing.listing_title));
 
   // Helper function to get user-specific storage keys
   const getUserStorageKey = (baseKey) => {
@@ -3152,7 +3163,12 @@ const CompareScreen = ({ navigation, route }) => {
       </View>
 
       {/* Content Area - Wrapped in flex container for proper layout */}
-      <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        <View style={{ flex: 1 }}>
         {/* Beautiful Title - Only show when no messages and not loading (matching web app) */}
         {messages.length === 0 && !loadingCompare && (
           <View style={styles.titleContainer}>
@@ -3170,6 +3186,7 @@ const CompareScreen = ({ navigation, route }) => {
         <ScrollView 
           style={styles.scrollView} 
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -3214,6 +3231,28 @@ const CompareScreen = ({ navigation, route }) => {
               </TouchableOpacity>
               {renderDropdown('second', showSecondDropdown, () => setShowSecondDropdown(false))}
             </View>
+
+            {/* Same listing warning (UI-only, matches web) */}
+            {isSameListingSelected && (
+              <View style={styles.sameListingWarning}>
+                <View style={styles.sameListingWarningRow}>
+                  <Ionicons
+                    name="warning-outline"
+                    size={18}
+                    color="#b45309"
+                    style={styles.sameListingWarningIcon}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sameListingWarningTitle}>
+                      Cannot compare the same listing
+                    </Text>
+                    <Text style={styles.sameListingWarningText}>
+                      Please select two different listings to compare their features, ratings, and reviews.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
 
             {/* Comparison Question */}
             <View style={styles.section}>
@@ -3306,6 +3345,7 @@ const CompareScreen = ({ navigation, route }) => {
             ref={flatListRef}
             onContentSizeChange={() => scrollToBottom()}
             onLayout={() => scrollToBottom()}
+            keyboardShouldPersistTaps="handled"
           >
             {messages.map((message, index) => renderMessage(message, index))}
             {isAsking && (
@@ -3325,53 +3365,49 @@ const CompareScreen = ({ navigation, route }) => {
 
       {/* Input Area - Same as ScanScreen (same as web app) */}
       {messages.length > 0 && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        >
-          <View style={styles.inputContainer}>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                value={question}
-                onChangeText={setQuestion}
-                placeholder="Scan or Ask Anything…"
-                placeholderTextColor="#999"
-                multiline
-                maxLength={1000}
-                editable={!isAsking}
-                onSubmitEditing={handleSend}
-                returnKeyType="send"
-              />
-              <TouchableOpacity
-                style={[
-                  styles.sendButton, 
-                  question.trim() && !isAsking && styles.sendButtonActive,
-                  (!question.trim() || isAsking) && styles.sendButtonDisabled
-                ]}
-                onPress={handleSend}
-                disabled={!question.trim() || isAsking}
-                activeOpacity={0.7}
-              >
-                {isAsking ? (
-                  <View style={styles.sendButtonLoadingContainer}>
-                    <ActivityIndicator size="small" color="#1e162a" style={{ marginRight: 8 }} />
-                    <Text style={styles.sendButtonLoadingText}>Processing...</Text>
-                  </View>
-                ) : (
-                  <Image 
-                    source={require('../assets/book2.png')} 
-                    style={styles.sendButtonIcon}
-                    resizeMode="contain"
-                    tintColor={question.trim() ? "#ffffff" : undefined}
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              value={question}
+              onChangeText={setQuestion}
+              placeholder="Scan or Ask Anything…"
+              placeholderTextColor="#999"
+              multiline
+              maxLength={1000}
+              editable={!isAsking}
+              onSubmitEditing={handleSend}
+              returnKeyType="send"
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton, 
+                question.trim() && !isAsking && styles.sendButtonActive,
+                (!question.trim() || isAsking) && styles.sendButtonDisabled
+              ]}
+              onPress={handleSend}
+              disabled={!question.trim() || isAsking}
+              activeOpacity={0.7}
+            >
+              {isAsking ? (
+                <View style={styles.sendButtonLoadingContainer}>
+                  <ActivityIndicator size="small" color="#1e162a" style={{ marginRight: 8 }} />
+                  <Text style={styles.sendButtonLoadingText}>Processing...</Text>
+                </View>
+              ) : (
+                <Image 
+                  source={require('../assets/book2.png')} 
+                  style={styles.sendButtonIcon}
+                  resizeMode="contain"
+                  tintColor={question.trim() ? "#ffffff" : undefined}
+                />
+              )}
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
         )}
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -3618,6 +3654,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  sameListingWarning: {
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  sameListingWarningRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  sameListingWarningIcon: {
+    marginTop: 2,
+    marginRight: 10,
+  },
+  sameListingWarningTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#b45309",
+    marginBottom: 4,
+  },
+  sameListingWarningText: {
+    fontSize: 13,
+    color: "#92400e",
+    lineHeight: 18,
   },
   resultContainer: {
     backgroundColor: '#ffffff',

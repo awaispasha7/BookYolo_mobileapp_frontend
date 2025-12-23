@@ -26,6 +26,8 @@ export default function HistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingScanId, setLoadingScanId] = useState(null);
+  const [scansExpanded, setScansExpanded] = useState(true);
+  const [comparesExpanded, setComparesExpanded] = useState(true);
   const lastUserIdRef = useRef(null);
   const lastRefreshTimeRef = useRef(null);
 
@@ -520,12 +522,20 @@ export default function HistoryScreen({ navigation }) {
   };
 
   const getLabelStyle = (label) => {
-    const labelStyles = {
+    // Match label styling used across the app (e.g., ScanScreen) for consistency.
+    const map = {
       "Outstanding Stay": { bg: "#0ea5e9", text: "#ffffff" },
+      "Excellent Stay": { bg: "#22c55e", text: "#ffffff" },
+      "Looks Legit": { bg: "#eab308", text: "#ffffff" },
       "Probably OK": { bg: "#eab308", text: "#ffffff" },
-      "Avoid": { bg: "#ef4444", text: "#ffffff" },
+      "A Bit Risky": { bg: "#f59e0b", text: "#ffffff" },
+      "Looks Sketchy": { bg: "#f97316", text: "#ffffff" },
+      "Travel Trap": { bg: "#ef4444", text: "#ffffff" },
+      "Booking Nightmare": { bg: "#991b1b", text: "#ffffff" },
+      "Insufficient Data": { bg: "#64748b", text: "#ffffff" },
+      "Avoid": { bg: "#ef4444", text: "#ffffff" }, // Backward compatibility
     };
-    return labelStyles[label] || { bg: "#6b7280", text: "#ffffff" };
+    return map[label] || { bg: "#64748b", text: "#ffffff" };
   };
 
   const extractRoomId = (url) => {
@@ -747,7 +757,6 @@ export default function HistoryScreen({ navigation }) {
         <View style={styles.scanItemHeader}>
           <View style={styles.scanItemLeft}>
             <View style={styles.propertyNameContainer}>
-              <Ionicons name="home" size={16} color="#000000" />
               <Text style={styles.propertyNameText} numberOfLines={2}>
                 {displayTitle}
               </Text>
@@ -775,6 +784,47 @@ export default function HistoryScreen({ navigation }) {
         {isLoading && (
           <View style={styles.loadingOverlay}>
             <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderCompareItem = ({ item, index }) => {
+    const isLoading = loadingScanId === item.id;
+    const displayTitle = item.title || "Comparison";
+    const displayLocation = item.scan1?.location || item.scan2?.location || "Location not available";
+
+    return (
+      <TouchableOpacity 
+        style={[styles.scanItem, isLoading && styles.scanItemLoading]}
+        onPress={() => !isLoading && handleComparePress(item)}
+        activeOpacity={isLoading ? 1 : 0.7}
+        disabled={isLoading}
+      >
+        <View style={styles.scanItemHeader}>
+          <View style={styles.scanItemLeft}>
+            <View style={styles.propertyNameContainer}>
+              <Text style={styles.propertyNameText} numberOfLines={2}>
+                {displayTitle}
+              </Text>
+            </View>
+            <Text style={styles.propertyLocation} numberOfLines={1}>
+              {displayLocation}
+            </Text>
+          </View>
+          <View style={styles.scanItemRight}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#1e162a" />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            )}
+          </View>
+        </View>
+
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color="#1e162a" />
           </View>
         )}
       </TouchableOpacity>
@@ -859,40 +909,50 @@ export default function HistoryScreen({ navigation }) {
           {/* Recent Scans Section */}
           {scans.length > 0 && (
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Recent Scans</Text>
-              {scans.map((scan, index) => (
-                <View key={scan.id}>
-                  {renderScanItem({ item: scan, index })}
-                </View>
-              ))}
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => setScansExpanded((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionTitle}>Recent Scans</Text>
+                <Ionicons
+                  name={scansExpanded ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+
+              {scansExpanded &&
+                scans.map((scan, index) => (
+                  <View key={scan.id}>
+                    {renderScanItem({ item: scan, index })}
+                  </View>
+                ))}
             </View>
           )}
           
           {/* Recent Compares Section */}
           {compares.length > 0 && (
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Recent Compares</Text>
-              {compares.map((compare, index) => {
-                const isLoading = loadingScanId === compare.id;
-                return (
-                  <TouchableOpacity
-                    key={compare.id}
-                    style={[styles.compareItem, isLoading && styles.scanItemLoading]}
-                    onPress={() => !isLoading && handleComparePress(compare)}
-                    activeOpacity={isLoading ? 1 : 0.7}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.compareTitle} numberOfLines={2}>
-                      {compare.title}
-                    </Text>
-                    {isLoading && (
-                      <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="small" color="#1e162a" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => setComparesExpanded((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionTitle}>Recent Compares</Text>
+                <Ionicons
+                  name={comparesExpanded ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+
+              {comparesExpanded &&
+                compares.map((compare, index) => (
+                  <View key={compare.id}>
+                    {renderCompareItem({ item: compare, index })}
+                  </View>
+                ))}
             </View>
           )}
         </ScrollView>
@@ -962,11 +1022,17 @@ const styles = StyleSheet.create({
   sectionContainer: {
     marginBottom: 32,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   compareItem: {
     paddingHorizontal: 20,
@@ -1041,7 +1107,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#1F2937',
-    marginLeft: 6,
+    marginLeft: 0,
     flex: 1,
     lineHeight: 20,
   },
