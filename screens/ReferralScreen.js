@@ -1,13 +1,13 @@
 // screens/ReferralScreen.js (Updated to match web app design)
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, ActivityIndicator, Clipboard, Linking, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, ActivityIndicator, Clipboard, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthProvider';
 import apiClient from '../lib/apiClient';
-import { BOOK1_LOGO } from '../constants/images';
+// Logo removed from this screen per UI requirements
 
 const { width } = Dimensions.get('window');
 
@@ -99,7 +99,7 @@ const ReferralScreen = ({ navigation }) => {
   const loadReferralLink = React.useCallback(() => {
     const userId = user?.id || user?.user?.id;
     if (userId) {
-      const baseUrl = 'https://bookyolo-frontend.vercel.app';
+      const baseUrl = 'https://bookyolo.com';
       const link = `${baseUrl}/signup?ref=${userId}`;
       setReferralLink(link);
     }
@@ -259,7 +259,7 @@ const ReferralScreen = ({ navigation }) => {
   }, [referralStats?.referral_count, sendReferralNotifications]);
 
   const copyReferralLink = async () => {
-    const linkToCopy = referralLink || (user ? `https://bookyolo-frontend.vercel.app/signup?ref=${user?.id || user?.user?.id || ''}` : '');
+    const linkToCopy = referralLink || (user ? `https://bookyolo.com/signup?ref=${user?.id || user?.user?.id || ''}` : '');
     if (linkToCopy) {
       Clipboard.setString(linkToCopy);
       Alert.alert(
@@ -334,15 +334,6 @@ const ReferralScreen = ({ navigation }) => {
             }}
           />
         </View>
-        
-        <View style={styles.logoContainer}>
-          <Image 
-            source={BOOK1_LOGO} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        
       </View>
 
       <ScrollView 
@@ -432,7 +423,7 @@ const ReferralScreen = ({ navigation }) => {
             <View style={styles.linkContainer}>
               <View style={styles.linkTextContainer}>
                 <Text style={styles.linkText} numberOfLines={2}>
-                  {referralLink || (user ? `https://bookyolo-frontend.vercel.app/signup?ref=${user?.id || user?.user?.id || ''}` : 'Loading...')}
+                  {referralLink || (user ? `https://bookyolo.com/signup?ref=${user?.id || user?.user?.id || ''}` : 'Loading...')}
                 </Text>
               </View>
               <TouchableOpacity 
@@ -535,16 +526,6 @@ const styles = StyleSheet.create({
     height: 50,
     marginTop: 22,
   },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 10,
-    marginTop: 65,
-  },
-  logo: {
-    width: 45,
-    height: 45,
-  },
   scrollView: {
     flex: 1,
     backgroundColor: "#ffffff",
@@ -574,9 +555,8 @@ const styles = StyleSheet.create({
     // },
     // shadowOpacity: 1,
     // shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 0,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   headerSection: {
     alignItems: 'center',
@@ -615,14 +595,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 0,
     borderColor: 'transparent',
-    shadowColor: "rgba(0, 0, 0, 0.05)",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   statsContent: {
     alignItems: 'center',
@@ -653,14 +627,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 0,
     borderColor: 'transparent',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   premiumBadgeText: {
     color: "#ffffff",
@@ -766,14 +732,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '48%',
     marginBottom: 14,
-    shadowColor: "rgba(0, 0, 0, 0.15)",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 0,
     borderColor: 'transparent',
     flexDirection: 'row',

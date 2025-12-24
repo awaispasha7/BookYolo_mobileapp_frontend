@@ -172,27 +172,45 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           // Silent error handling
         }
-        
-        // Fetch scan balance after successful login
-        try {
-          const { data: userData, error: userError } = await apiClient.getCurrentUser();
-          if (userData && !userError) {
-            const totalLimit = userData.limits?.total_limit || 50;
-            const backendUsed = userData.used || 0;
-            const backendRemaining = userData.remaining || (totalLimit - backendUsed);
-            
-            // For new accounts, ensure they have the full scan allowance
-            const cappedUsed = Math.min(totalLimit, backendUsed);
-            const cappedRemaining = Math.max(0, Math.min(totalLimit, backendRemaining));
-            
-            setScanBalance({
-              remaining: cappedRemaining,
-              used: cappedUsed,
-              plan: userData.plan || 'free',
-              limits: userData.limits || { total_limit: 50 }
-            });
-          } else {
-            // Set default scan balance for new accounts - give them full 50 scans
+
+        // IMPORTANT: Don't block the login UX on post-login enrichment (/me + scan balance).
+        // We return success immediately so the app can navigate quickly, then update scanBalance in background.
+        setLoading(false);
+
+        // Background: refresh scan balance (via /me) and send welcome notification.
+        // This preserves the same end-state, but avoids long "Logging in..." waits on cold starts/slow networks.
+        (async () => {
+          try {
+            const { data: userData, error: userError } = await apiClient.getCurrentUser();
+            if (userData && !userError) {
+              const totalLimit = userData.limits?.total_limit || 50;
+              const backendUsed = userData.used || 0;
+              const backendRemaining = userData.remaining || (totalLimit - backendUsed);
+
+              const cappedUsed = Math.min(totalLimit, backendUsed);
+              const cappedRemaining = Math.max(0, Math.min(totalLimit, backendRemaining));
+
+              const freshBalance = {
+                remaining: cappedRemaining,
+                used: cappedUsed,
+                plan: userData.plan || 'free',
+                limits: userData.limits || { total_limit: 50 }
+              };
+              setScanBalance(freshBalance);
+              try {
+                await AsyncStorage.setItem('user_scan_balance', JSON.stringify(freshBalance));
+              } catch (_) {
+                // Silent error handling
+              }
+            } else {
+              setScanBalance({
+                remaining: 50,
+                used: 0,
+                plan: 'free',
+                limits: { total_limit: 50 }
+              });
+            }
+          } catch (_) {
             setScanBalance({
               remaining: 50,
               used: 0,
@@ -200,29 +218,18 @@ export const AuthProvider = ({ children }) => {
               limits: { total_limit: 50 }
             });
           }
-        } catch (error) {
-          // Set default scan balance for new accounts - give them full 50 scans
-          setScanBalance({
-            remaining: 50,
-            used: 0,
-            plan: 'free',
-            limits: { total_limit: 50 }
-          });
-        }
-        
-        // Send welcome notification after successful login
-        try {
-          const userName = data.user.email?.split('@')[0] || 'User';
-          await notificationService.sendWelcomeNotification(userName);
-        } catch (error) {
-          // Silent error handling for notifications
-        }
+
+          try {
+            const userName = data.user.email?.split('@')[0] || 'User';
+            await notificationService.sendWelcomeNotification(userName);
+          } catch (_) {
+            // Silent error handling for notifications
+          }
+        })();
 
         // Octopus integration disabled on login to prevent 404 errors
         // Users will be added to Octopus contacts during email verification instead
         // console.log('Login successful - Octopus integration handled during email verification');
-        
-        setLoading(false);
         return { data: { user: data.user }, error: null };
       } else {
         setLoading(false);

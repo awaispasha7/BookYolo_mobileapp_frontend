@@ -442,10 +442,11 @@ const CompareScreen = ({ navigation, route }) => {
       
       if (error) {
         // Handle authentication errors silently (user logged out)
-        const isAuthError = error.message && (
-          error.message.includes('401') || 
-          error.message.includes('Unauthorized') || 
-          error.message.includes('token')
+        // apiClient returns error as a STRING
+        const isAuthError = typeof error === 'string' && (
+          error.includes('401') || 
+          error.includes('Unauthorized') || 
+          error.includes('token')
         );
         
         if (isAuthError || !user) {
@@ -459,8 +460,13 @@ const CompareScreen = ({ navigation, route }) => {
         return;
       }
       
+      // Normalize backend response shape:
+      // - may be an array (backward compatible)
+      // - or may be { scans: [...], pagination: {...} }
+      const scansList = Array.isArray(data) ? data : (data?.scans || []);
+      
       // Filter to show only unique Airbnb links (most recent scan for each URL)
-      const uniqueScans = filterUniqueScans(data || []);
+      const uniqueScans = filterUniqueScans(scansList || []);
       
       // Fetch additional details for each scan to get listing_title and location
       const enrichedScans = await Promise.all(
@@ -486,10 +492,11 @@ const CompareScreen = ({ navigation, route }) => {
       setScans(enrichedScans);
     } catch (error) {
       // Handle authentication errors silently (user logged out)
-      const isAuthError = error.message && (
-        error.message.includes('401') || 
-        error.message.includes('Unauthorized') || 
-        error.message.includes('token')
+      const errorMsg = (error && error.message) ? error.message : String(error || '');
+      const isAuthError = (
+        errorMsg.includes('401') || 
+        errorMsg.includes('Unauthorized') || 
+        errorMsg.includes('token')
       );
       
       if (isAuthError || !user) {
@@ -1914,7 +1921,7 @@ const CompareScreen = ({ navigation, route }) => {
             "Listings Not Scanned",
             "Please scan both listings first before comparing them.",
             [
-              { text: "Go to Scan", onPress: () => navigation.navigate('Scan') },
+              { text: "Go to Scan", onPress: () => navigation.navigate('Scan', { reset: true, timestamp: Date.now() }) },
               { text: "Cancel", style: "cancel" }
             ]
           );

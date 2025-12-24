@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   View, 
   Text, 
@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from "../lib/apiClient";
 import { useAuth } from "../context/AuthProvider";
 
-export default function HistoryScreen({ navigation }) {
+export default function HistoryScreen({ navigation, route }) {
   const { user } = useAuth();
   const [scans, setScans] = useState([]);
   const [compares, setCompares] = useState([]);
@@ -30,6 +30,7 @@ export default function HistoryScreen({ navigation }) {
   const [comparesExpanded, setComparesExpanded] = useState(true);
   const lastUserIdRef = useRef(null);
   const lastRefreshTimeRef = useRef(null);
+  const loadRunIdRef = useRef(0); // used to ignore stale async enrich results
 
   // Helper function to get user-specific storage keys
   const getUserStorageKey = (baseKey) => {
@@ -84,6 +85,7 @@ export default function HistoryScreen({ navigation }) {
   const loadHistory = async () => {
     console.log('🔵 [HistoryScreen] loadHistory called');
     lastRefreshTimeRef.current = Date.now();
+    const runId = ++loadRunIdRef.current;
     try {
       // Check if user is authenticated before loading
       if (!user) {
@@ -236,30 +238,14 @@ export default function HistoryScreen({ navigation }) {
       
       // Filter to show only unique Airbnb links (most recent scan for each URL)
       const uniqueScans = filterUniqueScans(scans);
-      
-      // Fetch additional details for each scan to get listing_title, location, and label
-      const enrichedScans = await Promise.all(
-        uniqueScans.map(async (scan) => {
-          try {
-            const { data: scanDetails } = await apiClient.getScanById(scan.id);
-            return {
-              ...scan,
-              type: 'scan',
-              listing_title: scanDetails?.listing_title || "",
-              location: scanDetails?.location || "",
-              label: scanDetails?.label || null
-            };
-          } catch (error) {
-            return {
-              ...scan,
-              type: 'scan',
-              listing_title: "",
-              location: "",
-              label: null
-            };
-          }
-        })
-      );
+      // FAST PATH: show scans immediately (titles/locations will enrich in background)
+      const quickScans = uniqueScans.map((scan) => ({
+        ...scan,
+        type: 'scan',
+        listing_title: scan.listing_title || "",
+        location: scan.location || "",
+        label: scan.label || null
+      }));
       
       // Process compares from chats (same as CompareScreen)
       const compareChats = chats.filter(chat => chat.type === 'compare');
@@ -303,131 +289,122 @@ export default function HistoryScreen({ navigation }) {
           const dateB = new Date(b.createdAt || b.created_at);
           return dateB - dateA;
         });
-      
-      // Enrich compares with scan details (same as CompareScreen approach)
-      console.log('🔵 [HistoryScreen DEBUG] Enriching compares, count:', allCompares.length);
-      const enrichedCompares = await Promise.all(
-        allCompares.map(async (compare) => {
-          try {
-            let scan1 = null;
-            let scan2 = null;
-            
-            console.log('🔵 [HistoryScreen DEBUG] Processing compare:', {
-              id: compare.id,
-              source: compare.source,
-              hasScanIds: !!compare.scan_ids,
-              scanIdsCount: compare.scan_ids?.length || 0
-            });
-            
-            if (compare.source === 'backend' && compare.scan_ids && compare.scan_ids.length >= 2) {
-              // Fetch scan data for backend compares
-              console.log('🔵 [HistoryScreen DEBUG] Fetching scan data for backend compare:', {
-                scanId1: compare.scan_ids[0],
-                scanId2: compare.scan_ids[1]
-              });
-              
-              const [scan1Result, scan2Result] = await Promise.all([
-                apiClient.getScanById(compare.scan_ids[0]).catch(() => ({ data: null })),
-                apiClient.getScanById(compare.scan_ids[1]).catch(() => ({ data: null }))
-              ]);
-              
-              scan1 = scan1Result.data;
-              scan2 = scan2Result.data;
-              
-              console.log('🔵 [HistoryScreen DEBUG] Scan data fetched:', {
-                hasScan1: !!scan1,
-                hasScan2: !!scan2,
-                scan1Url: scan1?.listing_url,
-                scan2Url: scan2?.listing_url
-              });
-            } else if (compare.source === 'local') {
-              // Use local compare data
-              console.log('🔵 [HistoryScreen DEBUG] Using local compare data');
-              scan1 = compare.firstListing;
-              scan2 = compare.secondListing;
+
+      // FAST PATH: show compares immediately (scan1/scan2 details will enrich in background)
+      const quickCompares = allCompares.map((compare) => ({
+        id: compare.id,
+        title: compare.title || 'Comparison',
+        date: new Date(compare.createdAt || compare.created_at || Date.now()).toLocaleDateString(),
+        source: compare.source,
+        chatId: compare.chatId || compare.id,
+        // Local compares already have scan objects; backend compares will be enriched later
+        scan1: compare.source === 'local' ? (compare.firstListing || null) : null,
+        scan2: compare.source === 'local' ? (compare.secondListing || null) : null
+      }));
+
+      // Sort by creation date (most recent first)
+      quickScans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      quickCompares.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Update UI immediately (avoid long blocking spinner)
+      setScans(quickScans);
+      setCompares(quickCompares);
+      setLoading(false);
+      setRefreshing(false);
+
+      // --- Background enrichment (non-blocking) ---
+      const mapWithConcurrency = async (items, limit, mapper) => {
+        const results = new Array(items.length);
+        let idx = 0;
+        const workers = new Array(Math.min(limit, items.length)).fill(null).map(async () => {
+          while (idx < items.length) {
+            const current = idx++;
+            try {
+              results[current] = await mapper(items[current], current);
+            } catch (e) {
+              results[current] = null;
             }
-            
-            if (scan1 && scan2) {
-              const enriched = {
-                id: compare.id,
-                type: 'compare',
-                created_at: compare.createdAt || compare.created_at,
-                listing_title: scan1?.listing_title && scan2?.listing_title 
-                  ? `${scan1.listing_title} vs ${scan2.listing_title}`
-                  : compare.title || 'Comparison',
-                location: scan1?.location || scan2?.location || "",
-                scan1: scan1,
-                scan2: scan2,
-                chatId: compare.chatId || compare.id,
-                source: compare.source
-              };
-              
-              console.log('✅ [HistoryScreen DEBUG] Compare enriched successfully:', {
-                id: enriched.id,
-                title: enriched.listing_title,
-                hasScan1: !!enriched.scan1,
-                hasScan2: !!enriched.scan2,
-                chatId: enriched.chatId
-              });
-              
-              return enriched;
-            }
-            
-            console.log('⚠️ [HistoryScreen DEBUG] Compare missing scan data, returning null');
-            return null;
-          } catch (error) {
-            console.log('❌ [HistoryScreen DEBUG] Error enriching compare:', error.message);
-            return null;
           }
-        })
-      );
-      
-      // Filter out null compares
-      const validCompares = enrichedCompares.filter(c => c !== null);
-      
-      console.log('🔵 [HistoryScreen DEBUG] Valid compares after filtering:', {
-        total: allCompares.length,
-        valid: validCompares.length,
-        invalid: allCompares.length - validCompares.length
+        });
+        await Promise.all(workers);
+        return results;
+      };
+
+      // Enrich scans (titles/locations/labels) in background with small concurrency
+      mapWithConcurrency(uniqueScans, 5, async (scan) => {
+        const { data: scanDetails } = await apiClient.getScanById(scan.id);
+        return {
+          ...scan,
+          type: 'scan',
+          listing_title: scanDetails?.listing_title || "",
+          location: scanDetails?.location || "",
+          label: scanDetails?.label || null
+        };
+      }).then((results) => {
+        if (loadRunIdRef.current !== runId) return; // ignore stale results
+        const enriched = results.filter(Boolean);
+        enriched.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setScans(enriched);
       });
-      
-      // Format compares for display (same format as CompareScreen modal)
-      const formattedCompares = validCompares.map(compare => {
-        const formatted = {
+
+      // Enrich compares in background (backend compares only) with small concurrency
+      mapWithConcurrency(allCompares, 3, async (compare) => {
+        let scan1 = null;
+        let scan2 = null;
+
+        if (compare.source === 'backend') {
+          // Some /chats list payloads may not include scan_ids for compare chats.
+          // Fetch /chat/{id} once to get scan_ids if missing, then fetch the scans.
+          const chatId = compare.chatId || compare.id;
+          let scanIds = compare.scan_ids;
+
+          if ((!scanIds || scanIds.length < 2) && chatId) {
+            const { data: chatData, error: chatErr } = await apiClient.getChat(chatId);
+            if (!chatErr && chatData?.chat?.scan_ids) {
+              scanIds = chatData.chat.scan_ids;
+            }
+          }
+
+          if (scanIds && scanIds.length >= 2) {
+            const [scan1Result, scan2Result] = await Promise.all([
+              apiClient.getScanById(scanIds[0]).catch(() => ({ data: null })),
+              apiClient.getScanById(scanIds[1]).catch(() => ({ data: null }))
+            ]);
+            scan1 = scan1Result.data;
+            scan2 = scan2Result.data;
+          }
+        } else if (compare.source === 'local') {
+          scan1 = compare.firstListing;
+          scan2 = compare.secondListing;
+        }
+
+        if (!scan1 || !scan2) return null;
+
+        const title =
+          scan1?.listing_title && scan2?.listing_title
+            ? `${scan1.listing_title} vs ${scan2.listing_title}`
+            : (compare.title || 'Comparison');
+
+        return {
           id: compare.id,
-          title: compare.listing_title || compare.title || 'Comparison',
-          date: new Date(compare.created_at).toLocaleDateString(),
+          title,
+          date: new Date(compare.createdAt || compare.created_at || Date.now()).toLocaleDateString(),
           source: compare.source,
           chatId: compare.chatId || compare.id,
-          scan1: compare.scan1,
-          scan2: compare.scan2
+          scan1,
+          scan2
         };
-        
-        console.log('🔵 [HistoryScreen DEBUG] Formatted compare:', {
-          id: formatted.id,
-          title: formatted.title,
-          chatId: formatted.chatId,
-          source: formatted.source,
-          hasScan1: !!formatted.scan1,
-          hasScan2: !!formatted.scan2
+      }).then((results) => {
+        if (loadRunIdRef.current !== runId) return; // ignore stale results
+        const enrichedCompares = results.filter(Boolean);
+        enrichedCompares.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Keep at least the quick list even if enrichment is partial: merge by id
+        setCompares((prev) => {
+          const byId = new Map(prev.map((c) => [c.id, c]));
+          for (const c of enrichedCompares) byId.set(c.id, { ...byId.get(c.id), ...c });
+          return Array.from(byId.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
         });
-        
-        return formatted;
       });
-      
-      // Sort by creation date (most recent first)
-      enrichedScans.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      formattedCompares.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      console.log('✅ [HistoryScreen] Processing complete:', {
-        enrichedScansCount: enrichedScans.length,
-        formattedComparesCount: formattedCompares.length
-      });
-      
-      setScans(enrichedScans);
-      setCompares(formattedCompares);
-      
-      console.log('✅ [HistoryScreen] State updated successfully');
     } catch (error) {
       console.error('❌ [HistoryScreen] Error in loadHistory:', {
         errorMessage: error.message,
@@ -547,6 +524,19 @@ export default function HistoryScreen({ navigation }) {
     }
   };
 
+  // Normalize URLs so "auto-open" works even if query params differ.
+  const getUrlKey = useCallback((url) => {
+    const roomId = extractRoomId(url);
+    if (roomId !== 'Unknown') return `airbnb:${roomId}`;
+
+    try {
+      const u = new URL(url);
+      return `${u.hostname}${u.pathname}`.replace(/\/$/, '');
+    } catch {
+      return String(url || '');
+    }
+  }, []);
+
   const handleScanPress = async (scan) => {
     // Set loading state for this specific scan
     setLoadingScanId(scan.id);
@@ -654,6 +644,26 @@ export default function HistoryScreen({ navigation }) {
     }
   };
 
+  // If we navigated here from the "Already Scanned" card, auto-open that scan once.
+  useEffect(() => {
+    const autoOpenUrl = route?.params?.autoOpenUrl;
+    if (!autoOpenUrl) return;
+    if (loading) return; // wait until history loads
+    if (loadingScanId) return; // avoid overlapping opens
+
+    // Clear the param so it doesn't re-trigger on future focuses/renders.
+    try {
+      navigation.setParams({ autoOpenUrl: undefined });
+    } catch {
+      // no-op
+    }
+
+    const target = scans.find((s) => getUrlKey(s?.listing_url) === getUrlKey(autoOpenUrl));
+    if (target) {
+      handleScanPress(target);
+    }
+  }, [route?.params?.autoOpenUrl, loading, loadingScanId, scans, getUrlKey, navigation]);
+
   const handleComparePress = async (compare) => {
     console.log('🔵 [HistoryScreen DEBUG] handleComparePress called with:', {
       compareId: compare.id,
@@ -743,9 +753,12 @@ export default function HistoryScreen({ navigation }) {
   const renderScanItem = ({ item, index }) => {
     const isLoading = loadingScanId === item.id;
     
-    // Use listing_title if available, otherwise fall back to URL
-    const displayTitle = item.listing_title || item.listing_url || 'Untitled';
-    const displayLocation = item.location || "Location not available";
+    // Use listing_title if available. Avoid showing raw URLs while background enrichment is running.
+    const displayTitle =
+      (item.listing_title && String(item.listing_title).trim().length > 0)
+        ? item.listing_title
+        : "Loading listing details…";
+    const displayDate = item?.created_at ? new Date(item.created_at).toLocaleDateString() : "";
     
     return (
       <TouchableOpacity 
@@ -760,17 +773,12 @@ export default function HistoryScreen({ navigation }) {
               <Text style={styles.propertyNameText} numberOfLines={2}>
                 {displayTitle}
               </Text>
-              {item.label && (
-                <View style={[styles.labelBadge, { backgroundColor: getLabelStyle(item.label).bg }]}>
-                  <Text style={[styles.labelBadgeText, { color: getLabelStyle(item.label).text }]}>
-                    {item.label}
-                  </Text>
-                </View>
-              )}
             </View>
-            <Text style={styles.propertyLocation} numberOfLines={1}>
-              {displayLocation}
-            </Text>
+            {!!displayDate && (
+              <Text style={styles.propertyLocation} numberOfLines={1}>
+                {displayDate}
+              </Text>
+            )}
           </View>
           <View style={styles.scanItemRight}>
             {isLoading ? (
@@ -793,7 +801,9 @@ export default function HistoryScreen({ navigation }) {
   const renderCompareItem = ({ item, index }) => {
     const isLoading = loadingScanId === item.id;
     const displayTitle = item.title || "Comparison";
-    const displayLocation = item.scan1?.location || item.scan2?.location || "Location not available";
+    const displayDate =
+      item?.date ||
+      (item?.created_at ? new Date(item.created_at).toLocaleDateString() : "");
 
     return (
       <TouchableOpacity 
@@ -809,9 +819,11 @@ export default function HistoryScreen({ navigation }) {
                 {displayTitle}
               </Text>
             </View>
-            <Text style={styles.propertyLocation} numberOfLines={1}>
-              {displayLocation}
-            </Text>
+            {!!displayDate && (
+              <Text style={styles.propertyLocation} numberOfLines={1}>
+                {displayDate}
+              </Text>
+            )}
           </View>
           <View style={styles.scanItemRight}>
             {isLoading ? (
@@ -842,7 +854,8 @@ export default function HistoryScreen({ navigation }) {
         style={styles.scanButton}
         onPress={() => {
           // Navigate to Scan tab
-          navigation.navigate('Scan');
+          const timestamp = Date.now();
+          navigation.navigate('Scan', { reset: true, timestamp });
         }}
         activeOpacity={0.8}
       >

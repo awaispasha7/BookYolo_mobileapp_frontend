@@ -991,7 +991,10 @@ export default function ScanScreen({ navigation, route }) {
           ) : isInfoCard ? (
             <BlueInfoCard
               variant={message.isAlreadyScanned ? "already_scanned" : "listing_not_found"}
-              onOpenRecentScans={() => navigation.navigate("History")}
+              onOpenRecentScans={() => {
+                const url = message.alreadyScannedUrl;
+                navigation.navigate("History", url ? { autoOpenUrl: url } : undefined);
+              }}
               onScanDifferentUrl={() => {
                 startNewChat();
                 setTimeout(() => textInputRef.current?.focus?.(), 200);
@@ -1127,7 +1130,7 @@ export default function ScanScreen({ navigation, route }) {
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeTitle}>Hi, I am BookYolo AI</Text>
               <Text style={styles.welcomeSubtitle}>
-                Scan your next stay before booking and avoid surprises. Paste any property URL from Airbnb, Booking, Expedia or Agoda.
+                Scan your next stay before booking and avoid surprises. Paste any property URL from Airbnb, Vrbo, Booking, Expedia, Hotels or Agoda.
               </Text>
             </View>
           ) : messages.length === 0 && isLoading ? (
