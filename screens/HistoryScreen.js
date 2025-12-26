@@ -240,8 +240,8 @@ export default function HistoryScreen({ navigation, route }) {
       const uniqueScans = filterUniqueScans(scans);
       // FAST PATH: show scans immediately (titles/locations will enrich in background)
       const quickScans = uniqueScans.map((scan) => ({
-        ...scan,
-        type: 'scan',
+              ...scan,
+              type: 'scan',
         listing_title: scan.listing_title || "",
         location: scan.location || "",
         label: scan.label || null
@@ -289,13 +289,13 @@ export default function HistoryScreen({ navigation, route }) {
           const dateB = new Date(b.createdAt || b.created_at);
           return dateB - dateA;
         });
-
+      
       // FAST PATH: show compares immediately (scan1/scan2 details will enrich in background)
       const quickCompares = allCompares.map((compare) => ({
-        id: compare.id,
+              id: compare.id,
         title: compare.title || 'Comparison',
         date: new Date(compare.createdAt || compare.created_at || Date.now()).toLocaleDateString(),
-        source: compare.source,
+              source: compare.source,
         chatId: compare.chatId || compare.id,
         // Local compares already have scan objects; backend compares will be enriched later
         scan1: compare.source === 'local' ? (compare.firstListing || null) : null,
@@ -366,25 +366,25 @@ export default function HistoryScreen({ navigation, route }) {
           }
 
           if (scanIds && scanIds.length >= 2) {
-            const [scan1Result, scan2Result] = await Promise.all([
+              const [scan1Result, scan2Result] = await Promise.all([
               apiClient.getScanById(scanIds[0]).catch(() => ({ data: null })),
               apiClient.getScanById(scanIds[1]).catch(() => ({ data: null }))
-            ]);
-            scan1 = scan1Result.data;
-            scan2 = scan2Result.data;
+              ]);
+              scan1 = scan1Result.data;
+              scan2 = scan2Result.data;
           }
-        } else if (compare.source === 'local') {
-          scan1 = compare.firstListing;
-          scan2 = compare.secondListing;
-        }
-
+            } else if (compare.source === 'local') {
+              scan1 = compare.firstListing;
+              scan2 = compare.secondListing;
+            }
+            
         if (!scan1 || !scan2) return null;
 
         const title =
           scan1?.listing_title && scan2?.listing_title
-            ? `${scan1.listing_title} vs ${scan2.listing_title}`
+                  ? `${scan1.listing_title} vs ${scan2.listing_title}`
             : (compare.title || 'Comparison');
-
+              
         return {
           id: compare.id,
           title,
@@ -772,12 +772,12 @@ export default function HistoryScreen({ navigation, route }) {
             <View style={styles.propertyNameContainer}>
               <Text style={styles.propertyNameText} numberOfLines={2}>
                 {displayTitle}
-              </Text>
-            </View>
+                  </Text>
+                </View>
             {!!displayDate && (
-              <Text style={styles.propertyLocation} numberOfLines={1}>
+            <Text style={styles.propertyLocation} numberOfLines={1}>
                 {displayDate}
-              </Text>
+            </Text>
             )}
           </View>
           <View style={styles.scanItemRight}>
@@ -820,9 +820,9 @@ export default function HistoryScreen({ navigation, route }) {
               </Text>
             </View>
             {!!displayDate && (
-              <Text style={styles.propertyLocation} numberOfLines={1}>
+            <Text style={styles.propertyLocation} numberOfLines={1}>
                 {displayDate}
-              </Text>
+            </Text>
             )}
           </View>
           <View style={styles.scanItemRight}>

@@ -1,9 +1,7 @@
 // screens/PrivacyTermsScreen.js (Updated with navigation)
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BOOK1_LOGO } from '../constants/images';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -48,18 +46,6 @@ const PrivacyTermsScreen = ({ navigation }) => {
               onPress={() => navigation.goBack()}
             />
           </View>
-          
-          <View style={styles.logoContainer}>
-            <Image 
-              source={BOOK1_LOGO} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          
-          {/* <View style={styles.versionContainer}>
-            <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
-          </View> */}
         </View>
         
       </View>
@@ -144,9 +130,6 @@ const PrivacyTermsScreen = ({ navigation }) => {
         <Text style={styles.updateText}>
           Last updated: December 2024
         </Text>
-        <Text style={styles.updateText}>
-          Version: 17.7.9.9b
-        </Text>
       </View>
 
     </ScrollView>
@@ -190,16 +173,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     marginTop: 22,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 10,
-    marginTop: 65,
-  },
-  logo: {
-    width: 45,
-    height: 45,
   },
   versionContainer: {
     position: 'absolute',

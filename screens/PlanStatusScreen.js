@@ -598,18 +598,6 @@ export default function PlanStatusScreen({ navigation }) {
         <View style={styles.legalSection}>
           <View style={styles.legalLinks}>
             <TouchableOpacity
-              onPress={() => Linking.openURL('https://bookyolo.com/terms-of-services')}
-              style={styles.legalLinkTouchable}
-            >
-              <Text style={styles.legalLink}>Terms of Service</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => Linking.openURL('https://bookyolo.com/privacy-policy')}
-              style={styles.legalLinkTouchable}
-            >
-              <Text style={styles.legalLink}>Privacy Policy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               onPress={() => Linking.openURL('https://bookyolo.com/cookie-policy')}
               style={styles.legalLinkTouchable}
             >
@@ -880,14 +868,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#E5E7EB',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   avatarText: {
     fontSize: 32,
@@ -915,14 +895,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#F3F4F6',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
   },
   planCardHeader: {
     flexDirection: 'row',
@@ -1033,14 +1005,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   upgradeButton: {
     backgroundColor: '#059669',

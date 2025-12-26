@@ -169,9 +169,6 @@ export default function EditProfileScreen({ navigation, route }) {
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="person-circle-outline" size={32} color="#1F2937" />
-          </View>
           <Text style={styles.title}>Edit Profile</Text>
           <Text style={styles.subtitle}>Update your personal information</Text>
         </View>
@@ -470,14 +467,6 @@ const styles = StyleSheet.create({
     padding: 24,
     marginHorizontal: 20,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
@@ -510,14 +499,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     minHeight: 52,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputWrapperError: {
     borderColor: "#EF4444",
@@ -557,14 +538,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   cancelButtonText: {
     color: "#374151",
@@ -581,14 +554,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
   },
   saveButtonDisabled: {
     opacity: 0.6,

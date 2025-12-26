@@ -1,13 +1,9 @@
-// screens/UpgradeScreen.js — Frontend-only UI per MVP v17.7.9.9b
-import React, { useState, useEffect, useRef } from 'react';
+// screens/UpgradeScreen.js — Frontend-only UI
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useIsFocused, useNavigationState } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../lib/apiClient';
 import { useAuth } from '../context/AuthProvider';
-import notificationService from '../lib/notificationService';
 
 // Inline iPhone Back Button Component
 function BackButton({ onPress, style }) {
@@ -47,102 +43,8 @@ const UpgradeScreen = ({ navigation }) => {
     }
   }, [user?.plan]);
 
-  // Send upgrade notification logic
-  useFocusEffect(
-    React.useCallback(() => {
-      const checkAndSendNotifications = async () => {
-        try {
-          // Check notification permissions
-          const { status } = await Notifications.getPermissionsAsync();
-          if (status !== 'granted') {
-            const { status: newStatus } = await Notifications.requestPermissionsAsync();
-            if (newStatus !== 'granted') {
-              return;
-            }
-          }
-
-          const userName = user?.email?.split('@')[0] || 'User';
-
-          // 1. Send one-time notification when user first visits upgrade screen in this session
-          const sessionId = await AsyncStorage.getItem('current_login_session_id');
-          if (sessionId) {
-            const sessionVisitKey = `upgrade_screen_notification_${sessionId}`;
-            const hasSessionNotification = await AsyncStorage.getItem(sessionVisitKey);
-            
-            if (!hasSessionNotification) {
-              const upgradeId = `upgrade_screen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              
-              await Notifications.scheduleNotificationAsync({
-                identifier: upgradeId,
-                content: {
-                  title: 'Upgrade to Premium! ⭐',
-                  body: `Hi ${userName}, unlock 300+ extra scans and advanced features with BookYolo Premium!`,
-                  data: {
-                    type: 'upgrade_reminder',
-                    uniqueId: upgradeId,
-                    timestamp: Date.now()
-                  },
-                  sound: true,
-                },
-                trigger: null,
-              });
-              
-              await AsyncStorage.setItem(sessionVisitKey, 'true');
-            }
-          }
-
-          // 2. Check if user qualifies for premium (3+ referrals) and hasn't upgraded yet
-          // Only show milestone notification if user hasn't upgraded yet
-          if ((userPlan !== 'premium') && (user?.id || user?.user?.id)) {
-            try {
-              const userId = user?.id || user?.user?.id;
-              const { data: stats } = await apiClient.getReferralStats(userId);
-              
-              if (stats && stats.referral_count >= 3 && !stats.has_premium) {
-                // User has 3+ referrals but hasn't upgraded - show notification
-                const milestoneKey = `upgrade_milestone_notification_${userId}`;
-                const lastMilestoneCount = await AsyncStorage.getItem(milestoneKey);
-                const currentCount = stats.referral_count || 0;
-                
-                // Only show if we haven't shown for this milestone count yet
-                if (lastMilestoneCount !== String(currentCount)) {
-                  const milestoneId = `upgrade_milestone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                  
-                  await Notifications.scheduleNotificationAsync({
-                    identifier: milestoneId,
-                    content: {
-                      title: 'You Qualify for Premium! 🎉',
-                      body: `Hi ${userName}, you've earned ${currentCount} referrals! Upgrade to Premium now for unlimited scans!`,
-                      data: {
-                        type: 'upgrade_reminder',
-                        uniqueId: milestoneId,
-                        timestamp: Date.now()
-                      },
-                      sound: true,
-                    },
-                    trigger: null,
-                  });
-                  
-                  await AsyncStorage.setItem(milestoneKey, String(currentCount));
-                }
-              }
-            } catch (error) {
-              // Silent error handling
-            }
-          }
-          
-        } catch (error) {
-          // Silent error handling
-        }
-      };
-      
-      checkAndSendNotifications();
-    }, [user, userPlan])
-  );
-
   const handleUpgrade = async () => {
     if (userPlan === 'premium') {
-      Alert.alert('Already Premium', 'You already have a Premium subscription!');
       return;
     }
 
@@ -239,7 +141,7 @@ const UpgradeScreen = ({ navigation }) => {
         </View>
         
       </View>
-      <Text style={styles.title}>Upgrade to Premium</Text>
+      <Text style={styles.title}>Upgrade to BookYolo Premium</Text>
 
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -281,7 +183,7 @@ const UpgradeScreen = ({ navigation }) => {
               <ActivityIndicator color="white" size="small" />
             ) : (
               <Text style={styles.ctaText}>
-                {userPlan === 'premium' ? 'Already Premium' : 'Upgrade to BookYolo Premium'}
+                Upgrade to BookYolo Premium
               </Text>
             )}
           </TouchableOpacity>
@@ -368,11 +270,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   planCard: {},
   premiumCard: {

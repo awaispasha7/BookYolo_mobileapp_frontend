@@ -121,10 +121,6 @@ export default function MainTabs() {
               navigation.setParams({ reset: true, timestamp });
               // Navigate to Scan screen with reset parameter
               navigation.navigate('Scan', { reset: true, timestamp });
-              // Also call onPress for normal tab navigation behavior
-              if (!isFocused) {
-                onPress();
-              }
             };
             
             return (
@@ -167,10 +163,6 @@ export default function MainTabs() {
               navigation.setParams({ reset: true, timestamp });
               // Navigate to Compare screen with reset parameter
               navigation.navigate('Compare', { reset: true, timestamp });
-              // Also call onPress for normal tab navigation behavior
-              if (!isFocused) {
-                onPress();
-              }
             };
             
             return (

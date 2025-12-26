@@ -37,6 +37,15 @@ function BackButton({ onPress, style }) {
 export default function AccountScreen({ navigation }) {
   const { user, userProfile, loading, signOut, scanBalance, refreshUser, refreshScanBalance } = useAuth();
 
+  // UI-only: match web app avatar behavior (first letter of first name)
+  const getFirstNameInitial = (fullName, email) => {
+    const name = (fullName || "").trim();
+    if (name) return name.split(/\s+/)[0]?.[0]?.toUpperCase() || "U";
+    const em = (email || "").trim();
+    if (em) return em[0]?.toUpperCase() || "U";
+    return "U";
+  };
+
   // Refresh scan balance when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -110,7 +119,7 @@ export default function AccountScreen({ navigation }) {
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>
-                {(user?.name || user?.full_name || userProfile?.full_name || user?.email || 'U')?.[0]?.toUpperCase() || 'U'}
+                {getFirstNameInitial(user?.name || user?.full_name || userProfile?.full_name, user?.email || userProfile?.email)}
               </Text>
             </View>
           </View>
@@ -198,12 +207,11 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.optionText}>Upgrade to Premium</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.optionRow}
-            onPress={() => Linking.openURL('https://bookyolo.com')}
+            onPress={() => navigation.navigate('Referral')}
             activeOpacity={0.7}
           >
             <View style={styles.optionLeft}>
@@ -212,7 +220,6 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.optionText}>Invite Friends to Unlock Premium</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -226,7 +233,6 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.optionText}>Edit Profile</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -240,7 +246,6 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.optionText}>Account Management</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -254,7 +259,6 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.optionText}>Support</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -268,7 +272,6 @@ export default function AccountScreen({ navigation }) {
               </View>
               <Text style={styles.logoutText}>Log Out</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
 
@@ -277,26 +280,10 @@ export default function AccountScreen({ navigation }) {
           <View style={styles.legalLinksContainer}>
             <TouchableOpacity 
               style={styles.legalLinkButton}
-              onPress={handleTermsPress}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.legalLinkText}>Terms of Use</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.legalLinkButton}
-              onPress={handlePrivacyPress}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.legalLinkText}>Privacy Policy</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.legalLinkButton}
               onPress={() => Linking.openURL('https://bookyolo.com/cookie-policy')}
               activeOpacity={0.7}
             >
-              <Text style={styles.legalLinkText}>Cookies</Text>
+              <Text style={styles.legalLinkText}>Cookie Policy</Text>
             </TouchableOpacity>
           </View>
           
@@ -424,14 +411,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
@@ -532,14 +511,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
@@ -606,11 +577,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     height: 40,
     flex: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
   },
   legalLinkText: {
     fontSize: 9,

@@ -45,11 +45,6 @@ const ContactSocialScreen = ({ navigation }) => {
     Alert.alert('Success', 'Email address copied to clipboard!');
   };
 
-  const openGmail = () => {
-    const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=help@bookyolo.com&su=BookYolo Support Request&body=Hi BookYolo Team,%0D%0A%0D%0AI need help with:%0D%0A%0D%0A[Please describe your question or issue here]%0D%0A%0D%0AThank you!';
-    Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open Gmail'));
-  };
-
   return (
     <View style={styles.container}>
       {/* Header with Back Button */}
@@ -101,15 +96,6 @@ const ContactSocialScreen = ({ navigation }) => {
           </View>
           
           {/* Action Buttons */}
-          <TouchableOpacity
-            style={styles.gmailButton}
-            onPress={openGmail}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="mail" size={18} color="#ffffff" style={styles.gmailButtonIcon} />
-            <Text style={styles.gmailButtonText}>Open Gmail</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => {
@@ -178,14 +164,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
@@ -255,34 +233,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B7280',
   },
-  gmailButton: {
-    width: '100%',
-    backgroundColor: '#1F2937',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    flexDirection: 'row',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  gmailButtonIcon: {
-    marginRight: 8,
-  },
-  gmailButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
   closeButton: {
     width: '100%',
     backgroundColor: '#F3F4F6',
@@ -293,11 +243,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   closeButtonText: {
     color: '#374151',

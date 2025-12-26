@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           // Silent error handling
         }
-
+        
         // IMPORTANT: Don't block the login UX on post-login enrichment (/me + scan balance).
         // We return success immediately so the app can navigate quickly, then update scanBalance in background.
         setLoading(false);
@@ -180,21 +180,21 @@ export const AuthProvider = ({ children }) => {
         // Background: refresh scan balance (via /me) and send welcome notification.
         // This preserves the same end-state, but avoids long "Logging in..." waits on cold starts/slow networks.
         (async () => {
-          try {
-            const { data: userData, error: userError } = await apiClient.getCurrentUser();
-            if (userData && !userError) {
-              const totalLimit = userData.limits?.total_limit || 50;
-              const backendUsed = userData.used || 0;
-              const backendRemaining = userData.remaining || (totalLimit - backendUsed);
-
-              const cappedUsed = Math.min(totalLimit, backendUsed);
-              const cappedRemaining = Math.max(0, Math.min(totalLimit, backendRemaining));
-
+        try {
+          const { data: userData, error: userError } = await apiClient.getCurrentUser();
+          if (userData && !userError) {
+            const totalLimit = userData.limits?.total_limit || 50;
+            const backendUsed = userData.used || 0;
+            const backendRemaining = userData.remaining || (totalLimit - backendUsed);
+            
+            const cappedUsed = Math.min(totalLimit, backendUsed);
+            const cappedRemaining = Math.max(0, Math.min(totalLimit, backendRemaining));
+            
               const freshBalance = {
-                remaining: cappedRemaining,
-                used: cappedUsed,
-                plan: userData.plan || 'free',
-                limits: userData.limits || { total_limit: 50 }
+              remaining: cappedRemaining,
+              used: cappedUsed,
+              plan: userData.plan || 'free',
+              limits: userData.limits || { total_limit: 50 }
               };
               setScanBalance(freshBalance);
               try {
@@ -202,15 +202,7 @@ export const AuthProvider = ({ children }) => {
               } catch (_) {
                 // Silent error handling
               }
-            } else {
-              setScanBalance({
-                remaining: 50,
-                used: 0,
-                plan: 'free',
-                limits: { total_limit: 50 }
-              });
-            }
-          } catch (_) {
+          } else {
             setScanBalance({
               remaining: 50,
               used: 0,
@@ -218,13 +210,21 @@ export const AuthProvider = ({ children }) => {
               limits: { total_limit: 50 }
             });
           }
-
-          try {
-            const userName = data.user.email?.split('@')[0] || 'User';
-            await notificationService.sendWelcomeNotification(userName);
           } catch (_) {
-            // Silent error handling for notifications
-          }
+          setScanBalance({
+            remaining: 50,
+            used: 0,
+            plan: 'free',
+            limits: { total_limit: 50 }
+          });
+        }
+        
+        try {
+          const userName = data.user.email?.split('@')[0] || 'User';
+          await notificationService.sendWelcomeNotification(userName);
+          } catch (_) {
+          // Silent error handling for notifications
+        }
         })();
 
         // Octopus integration disabled on login to prevent 404 errors

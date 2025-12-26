@@ -21,7 +21,6 @@ import ReferralScreen from "./screens/ReferralScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import UpgradeScreen from "./screens/UpgradeScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
-import NotificationSettingsScreen from "./screens/NotificationSettingsScreen";
 import AccountScreen from "./screens/AccountScreen";
 import PlanStatusScreen from "./screens/PlanStatusScreen";
 import PaymentSuccessScreen from "./screens/PaymentSuccessScreen";
@@ -158,11 +157,6 @@ function AppContent() {
       <Stack.Screen 
         name="EditProfile" 
         component={EditProfileScreen}
-        options={{ headerShown: false }} 
-      />
-      <Stack.Screen 
-        name="NotificationSettings" 
-        component={NotificationSettingsScreen}
         options={{ headerShown: false }} 
       />
       <Stack.Screen 

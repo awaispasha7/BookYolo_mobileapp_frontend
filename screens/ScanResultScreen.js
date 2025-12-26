@@ -24,7 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from "../lib/apiClient";
 import { useAuth } from "../context/AuthProvider";
-import { BOOK1_LOGO } from "../constants/images";
+// Logo removed from this screen per UI requirements
 
 const { width } = Dimensions.get("window");
 
@@ -979,24 +979,12 @@ export default function ScanResultScreen({ route, navigation }) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
           <View style={styles.container}>
-            {/* Header with Back Button, Logo and MVP Version */}
+            {/* Header with Back Button */}
             <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
               <View style={styles.backButtonContainer}>
                 <BackButton 
                   onPress={() => navigation.goBack()}
                 />
-              </View>
-              
-              <View style={styles.logoContainer}>
-                <Image 
-                  source={BOOK1_LOGO} 
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
-              
-              <View style={styles.versionContainer}>
-                <Text style={styles.versionText}>MVP 17.7.9.9b</Text>
               </View>
             </View>
             
@@ -1196,36 +1184,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 50,
     height: 50,
-  },
-  logoContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-    backgroundColor: 'transparent',
-    marginHorizontal: 15,
-  },
-  logo: {
-    width: 35,
-    height: 35,
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-  },
-  versionContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 85,
-    height: 40,
-    backgroundColor: 'transparent',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  versionText: {
-    fontSize: 9,
-    color: "#374151",
-    fontWeight: "600",
-    textAlign: 'center',
-    letterSpacing: 0.2,
   },
   debugText: {
     fontSize: 12,
