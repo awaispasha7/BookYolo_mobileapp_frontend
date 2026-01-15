@@ -1,3 +1,18 @@
+/**
+ * PrivacyTermsScreen.js - Privacy Policy and Terms of Service
+ * 
+ * Displays the app's privacy policy and terms of service.
+ * 
+ * Features:
+ * - Privacy policy content
+ * - Terms of service content
+ * - Scrollable content view
+ * - Back navigation
+ * 
+ * Navigation:
+ * - Back -> Previous screen
+ */
+
 // screens/PrivacyTermsScreen.js (Updated with navigation)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';

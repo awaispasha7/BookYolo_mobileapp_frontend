@@ -1,3 +1,21 @@
+/**
+ * iPhoneBackButton.js - iOS-style Back Button Component
+ * 
+ * Reusable back button component styled to match iOS design guidelines.
+ * 
+ * Features:
+ * - iOS-style chevron icon
+ * - Customizable title text
+ * - Customizable styles
+ * - Touch feedback (activeOpacity)
+ * 
+ * Props:
+ * - onPress: Function to call when button is pressed
+ * - title: Text to display (default: "Back")
+ * - style: Additional styles for the button container
+ * - textStyle: Additional styles for the text
+ */
+
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

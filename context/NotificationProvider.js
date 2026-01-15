@@ -1,3 +1,20 @@
+/**
+ * NotificationProvider.js - Notification Context Provider
+ * 
+ * Provides notification state and initialization throughout the app.
+ * 
+ * Features:
+ * - Notification service initialization
+ * - Permission status tracking
+ * - Navigation integration for notification taps
+ * - Notification response handling
+ * - Context for accessing notification state
+ * 
+ * Context Methods:
+ * - Access to notification initialization status
+ * - Permission status information
+ */
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import notificationService from '../lib/notificationService';

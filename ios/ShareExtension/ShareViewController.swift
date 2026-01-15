@@ -82,33 +82,22 @@ class ShareViewController: SLComposeServiceViewController {
     }
     
     private func openMainApp(with url: String) {
-        // Create URL with bookyolo:// scheme to open the main app
-        // The deep link handler will process this and navigate to Scan screen
-        guard let appURL = URL(string: "bookyolo://scan?url=\(url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url)") else {
+        // Open the web app with the shared URL
+        let webAppURL = "https://bookyolo-frontend.vercel.app/scan?url=\(url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url)"
+        
+        guard let webURL = URL(string: webAppURL) else {
+            self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             return
         }
         
-        // Open the main app
-        var responder = self as UIResponder?
-        while responder != nil {
-            if let application = responder as? UIApplication {
-                application.perform(#selector(NSXPCConnection.suspend))
-                break
-            }
-            responder = responder?.next
-        }
-        
-        // Use openURL with completion handler
+        // Open the web app in Safari
         DispatchQueue.main.async {
             if let sharedApplication = UIApplication.shared as? UIApplication {
-                sharedApplication.open(appURL, options: [:], completionHandler: { success in
-                    if !success {
-                        // Fallback: Try to open Safari as last resort
-                        if let safariURL = URL(string: url) {
-                            sharedApplication.open(safariURL, options: [:], completionHandler: nil)
-                        }
-                    }
+                sharedApplication.open(webURL, options: [:], completionHandler: { success in
+                    self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
                 })
+            } else {
+                self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             }
         }
     }

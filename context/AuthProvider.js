@@ -1,3 +1,26 @@
+/**
+ * AuthProvider.js - Authentication Context Provider
+ * 
+ * Provides authentication state and methods throughout the app using React Context.
+ * 
+ * Features:
+ * - User authentication state management
+ * - Login, signup, logout functionality
+ * - Token management (storage and retrieval)
+ * - User profile data management
+ * - Scan balance tracking
+ * - Automatic auth status check on app start
+ * - Integration with notification service
+ * - Octopus email service integration for new users
+ * 
+ * Context Methods:
+ * - signIn: Login user with email and password
+ * - signUp: Register new user
+ * - signOut: Logout current user
+ * - refreshUser: Refresh user data from backend
+ * - refreshScanBalance: Refresh scan balance from backend
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../lib/apiClient';
@@ -40,7 +63,11 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await apiClient.getCurrentUser();
         
         if (data && !error) {
-          setUser(data.user);
+          setUser({
+            ...data.user,
+            subscription_expires: data.subscription_expires,
+            subscription_status: data.subscription_status
+          });
           
           // Check if this is a new account first (before checking AsyncStorage)
           const totalLimit = data.limits?.total_limit || 50;
@@ -133,11 +160,18 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } else {
+          // Token is invalid or expired (401 error from apiClient)
           await apiClient.removeAuthToken();
+          setUser(null);
         }
+      } else {
+        // No token found, ensure user is null
+        setUser(null);
       }
     } catch (error) {
-      // Silent error handling
+      // Silent error handling - clear user on any error
+      setUser(null);
+      await apiClient.removeAuthToken();
     } finally {
       setInitializing(false);
       setLoading(false);
@@ -156,7 +190,11 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (data && data.user) {
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          subscription_expires: data.subscription_expires,
+          subscription_status: data.subscription_status
+        });
         
         // Create a new session identifier for this login session
         const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -483,7 +521,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await apiClient.getCurrentUser();
       if (data && !error) {
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          subscription_expires: data.subscription_expires,
+          subscription_status: data.subscription_status
+        });
         
         // Check if this is a new account first (before checking AsyncStorage)
         const totalLimit = data.limits?.total_limit || 50;
@@ -590,9 +632,19 @@ export const AuthProvider = ({ children }) => {
         
         return { data: data.user, error: null };
       } else {
+        // Token expired or invalid - clear user state
+        if (error && (error.includes('Session expired') || error.includes('401'))) {
+          setUser(null);
+          await apiClient.removeAuthToken();
+        }
         return { data: null, error: error };
       }
     } catch (error) {
+      // On any error, clear user state if it's an auth error
+      if (error?.message?.includes('Session expired') || error?.message?.includes('401')) {
+        setUser(null);
+        await apiClient.removeAuthToken();
+      }
       return { data: null, error: error.message };
     }
   };

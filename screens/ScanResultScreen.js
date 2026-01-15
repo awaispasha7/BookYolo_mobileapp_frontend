@@ -1,3 +1,23 @@
+/**
+ * ScanResultScreen.js - Property Scan Results Display
+ * 
+ * Displays the results of a property scan, including AI-generated analysis.
+ * Users can ask follow-up questions about the scanned property.
+ * 
+ * Features:
+ * - Display of scanned property details
+ * - AI-generated property analysis
+ * - Question-asking functionality
+ * - Chat-like interface for Q&A
+ * - Save scan results
+ * - Share functionality
+ * - Navigation back to scan screen
+ * 
+ * Navigation:
+ * - Back -> ScanScreen or HistoryScreen
+ * - Share -> Native share sheet
+ */
+
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -1226,11 +1246,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   urlText: {
     fontSize: 14,
@@ -1273,11 +1288,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -1307,11 +1317,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   issuesContainer: {
     marginTop: 12,
@@ -1363,11 +1368,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   categoriesTitle: {
     fontSize: 18,
@@ -1383,11 +1383,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   inspectionCategoryCardAllClear: {
     backgroundColor: '#D1FAE5',
@@ -1447,11 +1442,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
     borderWidth: 0,
   },
   chatToggleText: {
@@ -1468,11 +1458,6 @@ const styles = StyleSheet.create({
     marginBottom: 4, // Reduced gap
     borderRadius: 12, // Same as other cards
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2, // Same as other cards
   },
   chatHeader: {
     flexDirection: 'row',
@@ -1537,11 +1522,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   typingDots: {
     flexDirection: 'row',
@@ -1574,11 +1554,6 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     maxWidth: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   welcomeText: {
     fontSize: 14,
@@ -1625,11 +1600,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   userMessage: {
     backgroundColor: '#000000', // Black background for user messages

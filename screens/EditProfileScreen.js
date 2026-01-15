@@ -1,3 +1,22 @@
+/**
+ * EditProfileScreen.js - User Profile Editor
+ * 
+ * Allows users to edit their profile information including name, email, and password.
+ * 
+ * Features:
+ * - Edit full name
+ * - Edit email address
+ * - Change password
+ * - Email validation
+ * - Password confirmation
+ * - Integration with backend API
+ * - Success/error feedback
+ * 
+ * Navigation:
+ * - Back -> AccountScreen
+ * - Successful update -> AccountScreen (with updated data)
+ */
+
 // screens/EditProfileScreen.js
 import React, { useState, useEffect } from "react";
 import {

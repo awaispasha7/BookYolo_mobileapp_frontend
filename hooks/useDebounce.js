@@ -1,3 +1,22 @@
+/**
+ * useDebounce.js - Debounce Hook
+ * 
+ * Custom React hook for debouncing function calls.
+ * Prevents rapid successive calls to a function within a specified delay period.
+ * 
+ * Usage:
+ * const debounce = useDebounce(1000); // 1 second delay
+ * debounce(() => { /* your function */ });
+ * 
+ * Features:
+ * - Configurable delay time
+ * - Returns a debounced function
+ * - Prevents multiple rapid executions
+ * 
+ * @param {number} delay - Delay in milliseconds (default: 1000ms)
+ * @returns {Function} - Debounced function that accepts a callback
+ */
+
 // hooks/useDebounce.js
 import { useRef } from 'react';
 

@@ -1,3 +1,24 @@
+/**
+ * LoginScreen.js - User Authentication Screen
+ * 
+ * Allows users to log in to their BookYolo account using email and password.
+ * 
+ * Features:
+ * - Email and password input fields with validation
+ * - Real-time email format validation
+ * - Secure password input (masked)
+ * - Integration with AuthProvider for authentication
+ * - Navigation to Sign Up and Forgot Password screens
+ * - Loading states during authentication
+ * - Error handling and user feedback
+ * 
+ * Navigation:
+ * - Successful login -> MainTabs (main app)
+ * - Sign Up link -> SignUpScreen
+ * - Forgot Password -> ForgotPasswordScreen
+ * - Back button -> SplashScreen
+ */
+
 import React, { useState, useRef } from 'react';
 import {
   View,

@@ -1,3 +1,20 @@
+/**
+ * SettingsScreen.js - Application Settings
+ * 
+ * Allows users to configure app settings and preferences.
+ * 
+ * Features:
+ * - Notification settings management
+ * - Account management options
+ * - Logout functionality
+ * - Integration with notification service
+ * - User preference storage
+ * 
+ * Navigation:
+ * - Back -> Previous screen (usually AccountScreen)
+ * - Logout -> SplashScreen/LoginScreen
+ */
+
 // screens/SettingsScreen.js (Updated without Notifications)
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, TextInput, ActivityIndicator, Modal } from 'react-native';

@@ -1,3 +1,24 @@
+/**
+ * MainTabs.js - Main Navigation Container
+ * 
+ * Bottom tab navigator that provides the main navigation structure for the app.
+ * Contains three primary tabs: Scan, Compare, and History.
+ * 
+ * Features:
+ * - Bottom tab navigation with custom styling
+ * - Platform-specific safe area handling (iOS/Android)
+ * - Custom tab bar buttons with focus states
+ * - Reset functionality for Scan and Compare tabs
+ * - Dynamic icon states (outline when inactive, filled when active)
+ * 
+ * Tabs:
+ * - Scan: New Scan tab for scanning property listings
+ * - Compare: Compare tab for comparing multiple listings
+ * - History: History tab for viewing past scans and comparisons
+ * 
+ * Note: Automatic notification service is disabled to prevent duplicate notifications
+ */
+
 import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";

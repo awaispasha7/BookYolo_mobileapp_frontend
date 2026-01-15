@@ -1,3 +1,21 @@
+/**
+ * PlanStatusScreen.js - Subscription Plan Status
+ * 
+ * Displays detailed information about the user's current subscription plan.
+ * 
+ * Features:
+ * - Current plan display (Free/Premium)
+ * - Subscription status
+ * - Scan balance information
+ * - Subscription management options
+ * - Cancel subscription functionality
+ * - Upgrade/downgrade options
+ * 
+ * Navigation:
+ * - Back -> AccountScreen
+ * - Upgrade -> UpgradeScreen
+ */
+
 // screens/PlanStatusScreen.js (Updated to match web app design and logic)
 import React, { useState, useEffect } from 'react';
 import {

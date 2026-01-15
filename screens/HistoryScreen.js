@@ -1,3 +1,21 @@
+/**
+ * HistoryScreen.js - Scan and Comparison History
+ * 
+ * Displays the user's history of scanned properties and comparisons.
+ * 
+ * Features:
+ * - List of all past scans with property details
+ * - List of all past comparisons
+ * - Pull-to-refresh functionality
+ * - Navigation to scan results and comparison results
+ * - User-specific data storage
+ * - Loading states and error handling
+ * 
+ * Navigation:
+ * - Scan item -> ScanResultScreen
+ * - Comparison item -> ComparisonResultScreen
+ */
+
 import React, { useState, useEffect } from "react";
 import { 
   View, 

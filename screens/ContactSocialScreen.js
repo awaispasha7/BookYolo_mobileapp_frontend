@@ -1,3 +1,19 @@
+/**
+ * ContactSocialScreen.js - Contact and Social Media Links
+ * 
+ * Displays contact information and social media links for BookYolo.
+ * 
+ * Features:
+ * - Contact email display
+ * - Copy email to clipboard
+ * - Social media links (opens in browser)
+ * - Navigation back
+ * 
+ * Navigation:
+ * - Back -> Previous screen
+ * - Social links -> External browser/app
+ */
+
 // screens/ContactSocialScreen.js (Updated to match web app design)
 import React from 'react';
 import {

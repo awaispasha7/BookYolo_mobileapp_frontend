@@ -1,3 +1,25 @@
+/**
+ * AccountScreen.js - User Account Management Screen
+ * 
+ * Main account screen displaying user information and account management options.
+ * 
+ * Features:
+ * - Display user profile information
+ * - Navigation to edit profile
+ * - Navigation to settings
+ * - Navigation to upgrade/subscription management
+ * - Navigation to referral program
+ * - Logout functionality
+ * - Plan status display
+ * 
+ * Navigation:
+ * - Edit Profile -> EditProfileScreen
+ * - Settings -> SettingsScreen
+ * - Upgrade -> UpgradeScreen
+ * - Referral -> ReferralScreen
+ * - Plan Status -> PlanStatusScreen
+ */
+
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, ActivityIndicator, Alert, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

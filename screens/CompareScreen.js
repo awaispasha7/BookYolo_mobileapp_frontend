@@ -1,3 +1,24 @@
+/**
+ * CompareScreen.js - Property Comparison Screen
+ * 
+ * Allows users to compare two property listings side by side.
+ * Users can select two scans from their history and ask questions about the comparison.
+ * 
+ * Features:
+ * - Selection of two scans from history
+ * - Side-by-side comparison view
+ * - Custom question input for comparison analysis
+ * - AI-powered comparison via backend API
+ * - Save comparison results
+ * - Navigation to comparison results
+ * - Scan balance tracking
+ * - User-specific data storage
+ * 
+ * Navigation:
+ * - Comparison result -> ComparisonResultScreen
+ * - Scan selection from history
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 

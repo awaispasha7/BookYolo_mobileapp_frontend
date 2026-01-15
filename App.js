@@ -1,3 +1,24 @@
+/**
+ * App.js - Main Application Entry Point
+ * 
+ * This is the root component of the BookYolo mobile application.
+ * It sets up the navigation structure, error boundaries, and global error handling.
+ * 
+ * Key Features:
+ * - React Navigation stack navigator setup
+ * - Error boundary for catching React errors
+ * - Deep link handling for referral codes, email verification, and share extension
+ * - Image preloading for better performance
+ * - Global error and promise rejection handlers
+ * - Authentication and notification context providers
+ * 
+ * Navigation Structure:
+ * - Splash screen (initial route)
+ * - Auth screens: Login, SignUp, ForgotPassword
+ * - Main app screens: MainTabs, ScanResult, ComparisonResult, etc.
+ * - Settings and account management screens
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from "@react-navigation/native";
@@ -29,7 +50,18 @@ import PaymentCancelScreen from "./screens/PaymentCancelScreen";
 
 const Stack = createStackNavigator();
 
-// Simple Error Boundary Component
+/**
+ * ErrorBoundary Component
+ * 
+ * Catches JavaScript errors anywhere in the child component tree,
+ * logs those errors, and displays a fallback UI instead of crashing the app.
+ * 
+ * Features:
+ * - Catches errors during rendering, lifecycle methods, and constructors
+ * - Logs detailed error information for debugging
+ * - Provides user-friendly error message with retry option
+ * - Special handling for 'medium' font-related errors
+ */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -79,15 +111,22 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+/**
+ * AppContent Component
+ * 
+ * Main content component that sets up navigation and initializes app services.
+ * Handles deep linking, image preloading, and notification service setup.
+ */
 function AppContent() {
+  // Navigation reference for programmatic navigation from services
   const navigationRef = useRef();
 
   useEffect(() => {
     try {
-      // Preload images at app startup to prevent loading delays
+      // Preload images at app startup to prevent loading delays during navigation
       preloadImages();
       
-      // Initialize deep link handler
+      // Initialize deep link handler for handling universal links and custom URL schemes
       deepLinkHandler.init();
       
       // Set up callback for signup with referral navigation
@@ -231,8 +270,20 @@ function AppContent() {
   );
 }
 
+/**
+ * Main App Component
+ * 
+ * Root component that wraps the entire application with:
+ * - SafeAreaProvider for handling device safe areas
+ * - NavigationContainer for React Navigation
+ * - ErrorBoundary for error catching
+ * - AuthProvider for authentication state management
+ * - NotificationProvider for push notifications
+ * 
+ * Also sets up global error handlers for unhandled errors and promise rejections.
+ */
 export default function App() {
-  // Global error handler with better logging
+  // Global error handler with enhanced logging for debugging
   useEffect(() => {
     const errorHandler = (error, isFatal) => {
       const errorMessage = error?.message || String(error);

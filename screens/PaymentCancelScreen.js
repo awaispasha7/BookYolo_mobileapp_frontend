@@ -1,3 +1,18 @@
+/**
+ * PaymentCancelScreen.js - Payment Cancellation Screen
+ * 
+ * Displays when user cancels the payment process.
+ * 
+ * Features:
+ * - Cancellation message
+ * - Option to try again
+ * - Option to go home
+ * 
+ * Navigation:
+ * - Try Again -> UpgradeScreen
+ * - Go Home -> MainTabs
+ */
+
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

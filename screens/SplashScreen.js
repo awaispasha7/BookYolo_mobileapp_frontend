@@ -1,11 +1,50 @@
-// screens/SplashScreen.js
+/**
+ * SplashScreen.js - Initial Welcome Screen
+ * 
+ * This is the first screen users see when opening the app.
+ * It displays the BookYolo logo and provides navigation options to Login or Sign Up.
+ * 
+ * Features:
+ * - Displays app logo/branding
+ * - Navigation buttons to Login and Sign Up screens
+ * - Prevents multiple simultaneous navigation attempts
+ * - Clean timeout management for smooth transitions
+ * 
+ * Navigation:
+ * - Login button -> LoginScreen
+ * - Sign Up button -> SignUpScreen
+ */
+
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { BOOK1_LOGO } from '../constants/images';
+import { useAuth } from '../context/AuthProvider';
 
 const SplashScreen = ({ navigation }) => {
+  const { user, initializing } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const navigationTimeoutRef = useRef(null);
+  const hasNavigatedRef = useRef(false); // Track if we've already navigated
+
+  // Auto-navigate to MainTabs if user is authenticated
+  useEffect(() => {
+    // Only navigate once, and only if not initializing and user exists
+    if (!initializing && user && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true; // Mark as navigated
+      // User is authenticated, navigate to MainTabs
+      // Use replace instead of navigate to prevent going back to splash
+      navigation.replace('MainTabs');
+    }
+    // Remove navigation from dependencies - it's stable in React Navigation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, initializing]);
+
+  // Reset navigation flag when user logs out
+  useEffect(() => {
+    if (!user) {
+      hasNavigatedRef.current = false;
+    }
+  }, [user]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

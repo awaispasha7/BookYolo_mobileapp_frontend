@@ -1,3 +1,21 @@
+/**
+ * PaymentSuccessScreen.js - Payment Success Confirmation
+ * 
+ * Displays confirmation screen after successful payment processing.
+ * Verifies payment with backend and upgrades user subscription.
+ * 
+ * Features:
+ * - Payment verification via Stripe session ID
+ * - User subscription upgrade
+ * - Success message display
+ * - Navigation to main app
+ * - Error handling for failed verification
+ * 
+ * Navigation:
+ * - Success -> MainTabs
+ * - Error -> UpgradeScreen (retry)
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

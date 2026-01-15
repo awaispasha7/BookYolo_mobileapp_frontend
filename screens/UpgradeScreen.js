@@ -1,3 +1,21 @@
+/**
+ * UpgradeScreen.js - Subscription Upgrade Screen
+ * 
+ * Allows users to upgrade their subscription plan to premium.
+ * 
+ * Features:
+ * - Display of current plan status
+ * - Premium plan information
+ * - Stripe checkout integration
+ * - Payment processing
+ * - Navigation to payment success/cancel screens
+ * 
+ * Navigation:
+ * - Back -> AccountScreen
+ * - Successful payment -> PaymentSuccessScreen
+ * - Cancelled payment -> PaymentCancelScreen
+ */
+
 // screens/UpgradeScreen.js — Frontend-only UI
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';

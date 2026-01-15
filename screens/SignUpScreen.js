@@ -1,3 +1,25 @@
+/**
+ * SignUpScreen.js - User Registration Screen
+ * 
+ * Allows new users to create a BookYolo account.
+ * 
+ * Features:
+ * - First name, email, and password input fields
+ * - Password confirmation with matching validation
+ * - Real-time email format validation
+ * - Password strength requirements
+ * - Referral code support (optional)
+ * - Terms and conditions acceptance
+ * - Integration with AuthProvider for account creation
+ * - Email verification flow
+ * - Navigation to Login screen after successful signup
+ * 
+ * Navigation:
+ * - Successful signup -> Email verification -> LoginScreen
+ * - Login link -> LoginScreen
+ * - Back button -> Previous screen
+ */
+
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Linking, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Pressable, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,3 +1,22 @@
+/**
+ * ComparisonResultScreen.js - Property Comparison Results Display
+ * 
+ * Displays the results of comparing two property listings.
+ * Shows AI-generated comparison analysis based on user's question.
+ * 
+ * Features:
+ * - Display of both compared properties
+ * - AI-generated comparison analysis
+ * - Question display
+ * - Save comparison functionality
+ * - Share functionality
+ * - Navigation back to compare screen
+ * 
+ * Navigation:
+ * - Back -> CompareScreen
+ * - Share -> Native share sheet
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,

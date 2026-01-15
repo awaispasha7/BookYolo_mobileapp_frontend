@@ -1,3 +1,21 @@
+/**
+ * OctopusTestButton.js - Octopus Email Service Test Component
+ * 
+ * Development/testing component for testing Octopus email integration.
+ * 
+ * Features:
+ * - Test adding users to Octopus contacts
+ * - Check if user exists in Octopus
+ * - Send test emails via Octopus
+ * - Loading states and error handling
+ * 
+ * Props:
+ * - email: Email address to test with (default: 'test@example.com')
+ * - fullName: Full name to test with (default: 'Test User')
+ * 
+ * Note: This is a development/testing component and should not be used in production.
+ */
+
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

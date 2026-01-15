@@ -1,3 +1,20 @@
+/**
+ * ReferralScreen.js - Referral Program Screen
+ * 
+ * Displays user's referral program information and allows sharing referral links.
+ * 
+ * Features:
+ * - Display referral link
+ * - Copy referral link to clipboard
+ * - Share referral link via native share
+ * - Display referral statistics (signups, rewards)
+ * - Integration with backend referral API
+ * 
+ * Navigation:
+ * - Back -> AccountScreen
+ * - Share -> Native share sheet
+ */
+
 // screens/ReferralScreen.js (Updated to match web app design)
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Dimensions, ActivityIndicator, Clipboard, Linking, Platform } from 'react-native';

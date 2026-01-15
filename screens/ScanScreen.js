@@ -1,3 +1,24 @@
+/**
+ * ScanScreen.js - Property Listing Scanner
+ * 
+ * Main screen for scanning and analyzing property listings from URLs.
+ * Users can input a listing URL and get AI-powered analysis of the property.
+ * 
+ * Features:
+ * - URL input for property listings (Airbnb, Booking.com, etc.)
+ * - Share extension integration for quick URL sharing
+ * - AI-powered property analysis via backend API
+ * - Real-time scan status updates
+ * - Question-asking functionality about scanned properties
+ * - Notification support for scan completion
+ * - History tracking of scans
+ * - Error handling and retry logic
+ * 
+ * Navigation:
+ * - Scan result -> ScanResultScreen
+ * - Settings -> SettingsScreen
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
@@ -1171,7 +1192,7 @@ export default function ScanScreen({ navigation, route }) {
 
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Messages Area */}
@@ -1657,8 +1678,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#ffffff",
+    ...(Platform.OS === 'android' && {
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    }),
   },
   inputWrapper: {
     flexDirection: 'row',

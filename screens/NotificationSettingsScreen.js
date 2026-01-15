@@ -1,3 +1,18 @@
+/**
+ * NotificationSettingsScreen.js - Notification Preferences
+ * 
+ * Allows users to configure notification settings and preferences.
+ * 
+ * Features:
+ * - Enable/disable notifications
+ * - Notification type preferences
+ * - Integration with notification service
+ * - Save preferences
+ * 
+ * Navigation:
+ * - Back -> SettingsScreen
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,

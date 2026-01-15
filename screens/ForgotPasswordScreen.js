@@ -1,3 +1,20 @@
+/**
+ * ForgotPasswordScreen.js - Password Reset Request Screen
+ * 
+ * Allows users to request a password reset link via email.
+ * 
+ * Features:
+ * - Email input for password reset
+ * - Email validation
+ * - Integration with backend password reset API
+ * - Success/error feedback
+ * - Navigation back to Login screen
+ * 
+ * Navigation:
+ * - Back -> LoginScreen
+ * - Successful reset -> LoginScreen (with confirmation message)
+ */
+
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, StatusBar, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
