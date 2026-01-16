@@ -561,15 +561,7 @@ export default function ScanScreen({ navigation, route }) {
       setCurrentChatId(data.chat_id);
       setCurrentScan(data.scan);
       
-      // Refresh user data to update scan count (same as web app - loadUserData refreshes balance)
-      await loadUserData();
-      await refreshUser();
-      // Refresh scan balance immediately (same as web app)
-      if (refreshScanBalance) {
-        await refreshScanBalance();
-      }
-      
-      // Show scan result directly in chat (same as web app - no separate screen)
+      // Show scan result immediately (optimize latency - don't wait for refresh calls)
       if (data.scan) {
         // Remove typing indicator and add assistant response with scan result
         setMessages(prev => {
@@ -591,21 +583,31 @@ export default function ScanScreen({ navigation, route }) {
         
         // If scan is still processing, poll for completion (same as web app)
         // Check if scan has analysis data - if not, it might still be processing
-        if (!data.scan.analysis && data.chat_id) {
-          // Get scan_id from chat and poll for completion
-          let scanId = null;
-          try {
-            const { data: chatData, error: chatError } = await apiClient.getChat(data.chat_id);
+        if (!data.scan.analysis && data.scan.id) {
+          // Use scan.id directly if available (optimize - avoid extra API call)
+          pollForScanCompletion(data.scan.id, data.chat_id);
+        } else if (!data.scan.analysis && data.chat_id) {
+          // Fallback: Get scan_id from chat if not in scan object
+          // Do this in background to avoid blocking UI
+          apiClient.getChat(data.chat_id).then(({ data: chatData, error: chatError }) => {
             if (!chatError && chatData?.chat?.scan_id) {
-              scanId = chatData.chat.scan_id;
-              // Start polling for scan completion
-              pollForScanCompletion(scanId, data.chat_id);
+              pollForScanCompletion(chatData.chat.scan_id, data.chat_id);
             }
-          } catch (e) {
-            console.error('Error fetching chat to get scan_id:', e);
-          }
+          }).catch(() => {
+            // Silent error handling
+          });
         }
       }
+      
+      // Refresh user data in background (non-blocking - optimize latency)
+      // Don't await these calls - let them run in parallel
+      Promise.all([
+        loadUserData().catch(() => {}),
+        refreshUser().catch(() => {}),
+        refreshScanBalance ? refreshScanBalance().catch(() => {}) : Promise.resolve()
+      ]).catch(() => {
+        // Silent error handling
+      });
     } catch (e) {
       const rawMessage = (e?.message || String(e) || "").toString();
       const msgLower = rawMessage.toLowerCase();
@@ -809,7 +811,7 @@ export default function ScanScreen({ navigation, route }) {
     }
   }, []);
 
-  // Poll for scan completion (same as web app)
+  // Poll for scan completion (optimized for latency)
   const pollForScanCompletion = (scanId, chatId) => {
     if (!scanId) return;
     
@@ -819,9 +821,11 @@ export default function ScanScreen({ navigation, route }) {
     }
     
     let pollCount = 0;
-    const maxPolls = 20; // Poll for max 60 seconds (20 * 3 seconds)
+    const maxPolls = 30; // Poll for max 60 seconds (30 * 2 seconds) - more frequent checks
+    const pollInterval = 2000; // Poll every 2 seconds (faster than 3s for better UX)
     
-    pollingIntervalRef.current = setInterval(async () => {
+    // Start polling immediately (no initial delay - optimize latency)
+    const pollOnce = async () => {
       pollCount++;
       
       try {
@@ -857,22 +861,41 @@ export default function ScanScreen({ navigation, route }) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
+          return true; // Scan complete
         } else if (pollCount >= maxPolls) {
           // Stop polling after max attempts
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
+          return false; // Max polls reached
         }
+        return false; // Continue polling
       } catch (error) {
-        console.error('Error polling scan data:', error);
-        // Stop polling on error
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
+        // Silent error handling - don't stop polling on transient errors
+        if (pollCount >= maxPolls) {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
         }
+        return false; // Continue polling
       }
-    }, 3000); // Poll every 3 seconds (same as web app)
+    };
+    
+    // Poll immediately (optimize latency - no initial delay)
+    pollOnce().then((isComplete) => {
+      if (!isComplete) {
+        // Continue polling if not complete
+        pollingIntervalRef.current = setInterval(async () => {
+          const isComplete = await pollOnce();
+          if (isComplete && pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+        }, pollInterval);
+      }
+    });
   };
 
   // Render text with clickable URLs (React Native component)
