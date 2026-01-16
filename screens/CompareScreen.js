@@ -8,6 +8,8 @@
  * - Selection of two scans from history
  * - Side-by-side comparison view
  * - Custom question input for comparison analysis
+ * 
+ * Updated: January 2026 - Repository sync
  * - AI-powered comparison via backend API
  * - Save comparison results
  * - Navigation to comparison results

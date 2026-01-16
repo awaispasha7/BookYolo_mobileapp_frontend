@@ -8,6 +8,8 @@
  * - Calls AppRegistry.registerComponent('main', () => App)
  * - Ensures proper environment setup for both Expo Go and native builds
  * - Handles platform-specific initialization automatically
+ * 
+ * Updated: January 2026 - Repository sync
  */
 
 import { registerRootComponent } from 'expo';

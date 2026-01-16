@@ -8,6 +8,8 @@
  * - Display of scanned property details
  * - AI-generated property analysis
  * - Question-asking functionality
+ * 
+ * Updated: January 2026 - Repository sync
  * - Chat-like interface for Q&A
  * - Save scan results
  * - Share functionality

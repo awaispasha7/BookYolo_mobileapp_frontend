@@ -8,6 +8,8 @@
  * - Bottom tab navigation with custom styling
  * - Platform-specific safe area handling (iOS/Android)
  * - Custom tab bar buttons with focus states
+ * 
+ * Updated: January 2026 - Repository sync
  * - Reset functionality for Scan and Compare tabs
  * - Dynamic icon states (outline when inactive, filled when active)
  * 

@@ -1,5 +1,6 @@
 // constants/images.js
 // Pre-resolved image sources for better performance
+// Updated: January 2026 - Repository sync
 import { Image } from 'react-native';
 
 // Pre-resolve images at module load time to prevent delays

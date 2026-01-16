@@ -15,6 +15,8 @@
  * 
  * @param {number} delay - Delay in milliseconds (default: 1000ms)
  * @returns {Function} - Debounced function that accepts a callback
+ * 
+ * Updated: January 2026 - Repository sync
  */
 
 // hooks/useDebounce.js

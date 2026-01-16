@@ -8,6 +8,8 @@
  * - List of all past comparisons
  * - Pull-to-refresh functionality
  * - Navigation to scan results and comparison results
+ * 
+ * Updated: January 2026 - Repository sync
  * - User-specific data storage
  * - Loading states and error handling
  * 

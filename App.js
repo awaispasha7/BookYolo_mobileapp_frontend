@@ -8,6 +8,8 @@
  * - React Navigation stack navigator setup
  * - Error boundary for catching React errors
  * - Deep link handling for referral codes, email verification, and share extension
+ * 
+ * Updated: January 2026 - Repository sync
  * - Image preloading for better performance
  * - Global error and promise rejection handlers
  * - Authentication and notification context providers

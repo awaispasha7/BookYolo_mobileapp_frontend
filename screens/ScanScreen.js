@@ -8,6 +8,8 @@
  * - URL input for property listings (Airbnb, Booking.com, etc.)
  * - Share extension integration for quick URL sharing
  * - AI-powered property analysis via backend API
+ * 
+ * Updated: January 2026 - Repository sync
  * - Real-time scan status updates
  * - Question-asking functionality about scanned properties
  * - Notification support for scan completion

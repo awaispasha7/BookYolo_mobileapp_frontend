@@ -8,6 +8,8 @@
  * - Displays app logo/branding
  * - Navigation buttons to Login and Sign Up screens
  * - Prevents multiple simultaneous navigation attempts
+ * 
+ * Updated: January 2026 - Repository sync
  * - Clean timeout management for smooth transitions
  * 
  * Navigation:

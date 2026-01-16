@@ -8,6 +8,8 @@
  * - Account management options
  * - Logout functionality
  * - Integration with notification service
+ * 
+ * Updated: January 2026 - Repository sync
  * - User preference storage
  * 
  * Navigation:

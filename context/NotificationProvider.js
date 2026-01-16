@@ -8,6 +8,8 @@
  * - Permission status tracking
  * - Navigation integration for notification taps
  * - Notification response handling
+ * 
+ * Updated: January 2026 - Repository sync
  * - Context for accessing notification state
  * 
  * Context Methods:

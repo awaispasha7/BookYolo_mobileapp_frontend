@@ -9,6 +9,8 @@
  * - Customizable styles
  * - Touch feedback (activeOpacity)
  * 
+ * Updated: January 2026 - Repository sync
+ * 
  * Props:
  * - onPress: Function to call when button is pressed
  * - title: Text to display (default: "Back")

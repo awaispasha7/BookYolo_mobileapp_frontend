@@ -8,6 +8,8 @@
  * - Login, signup, logout functionality
  * - Token management (storage and retrieval)
  * - User profile data management
+ * 
+ * Updated: January 2026 - Repository sync
  * - Scan balance tracking
  * - Automatic auth status check on app start
  * - Integration with notification service

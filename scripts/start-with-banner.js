@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Updated: January 2026 - Repository sync
 const fs = require('fs');
 const path = require('path');
 

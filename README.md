@@ -1,6 +1,8 @@
 # 📱 BookYolo iOS App Store Deployment Guide
 ## Complete Step-by-Step Instructions for MacBook
 
+<!-- Updated: January 2026 - Repository sync -->
+
 ---
 
 **Project:** BookYolo Mobile App  

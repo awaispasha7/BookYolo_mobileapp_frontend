@@ -8,6 +8,8 @@
  * - Navigation to edit profile
  * - Navigation to settings
  * - Navigation to upgrade/subscription management
+ * 
+ * Updated: January 2026 - Repository sync
  * - Navigation to referral program
  * - Logout functionality
  * - Plan status display

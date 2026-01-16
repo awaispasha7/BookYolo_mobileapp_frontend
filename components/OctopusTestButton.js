@@ -9,6 +9,8 @@
  * - Send test emails via Octopus
  * - Loading states and error handling
  * 
+ * Updated: January 2026 - Repository sync
+ * 
  * Props:
  * - email: Email address to test with (default: 'test@example.com')
  * - fullName: Full name to test with (default: 'Test User')

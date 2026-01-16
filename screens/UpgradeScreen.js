@@ -8,6 +8,8 @@
  * - Premium plan information
  * - Stripe checkout integration
  * - Payment processing
+ * 
+ * Updated: January 2026 - Repository sync
  * - Navigation to payment success/cancel screens
  * 
  * Navigation:

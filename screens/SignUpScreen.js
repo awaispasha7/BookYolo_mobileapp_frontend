@@ -8,6 +8,8 @@
  * - Password confirmation with matching validation
  * - Real-time email format validation
  * - Password strength requirements
+ * 
+ * Updated: January 2026 - Repository sync
  * - Referral code support (optional)
  * - Terms and conditions acceptance
  * - Integration with AuthProvider for account creation
